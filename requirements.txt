@@ -1,0 +1,11 @@
+Flask==3.x
+Flask-SQLAlchemy==3.x
+Flask-Login==0.6.x
+Flask-WTF==1.2.x
+Flask-Bcrypt==1.0.x
+PyMySQL==1.1.x
+python-dotenv==1.0.x
+email-validator==2.x
+WTForms==3.x
+cryptography==42.x
+gunicorn==21.x
