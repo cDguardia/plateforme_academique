@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: mysql:8.0
+    container_name: academique_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: academique
+      MYSQL_USER: academique
+      MYSQL_PASSWORD: academique
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - academique_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "academique", "-pacademique"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build: .
+    container_name: academique_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: mysql+pymysql://academique:academique@db:3306/academique
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-long-random-string}
+      SESSION_COOKIE_SECURE: "false"
+      SESSION_LIFETIME_MINUTES: "30"
+    ports:
+      - "5000:5000"
+    networks:
+      - academique_net
+    command: >
+      sh -c "flask init-db && flask seed-db && gunicorn --bind 0.0.0.0:5000 --workers 2 run:app"
+
+networks:
+  academique_net:
+    driver: bridge
+
+volumes:
+  db_data:
