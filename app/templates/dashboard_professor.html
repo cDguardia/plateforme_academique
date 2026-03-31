@@ -125,6 +125,15 @@
             font-size: 0.95em;
             padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .action-item:hover {
+            background-color: #f5f5f5;
         }
         .action-item:last-child {
             border-bottom: none;
@@ -157,6 +166,22 @@
             padding: 0; 
             min-width: 35px;
             text-align: center;
+        }
+
+        /* --- Boutons d'ajout --- */
+        .btn-add {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        .btn-add:hover {
+            background-color: #0056b3;
         }
 
         /* --- Titre final en bas à droite --- */
@@ -224,6 +249,7 @@
                     <li class="list-item">Grade 11 Origines du Sharingan(S. 301) - 2 nov.</li>
                     <li class="list-item">Grade 10 Histoire de l'Akatsuki<br>(En ligne) - 4 nov.</li>
                 </ul>
+                <button class="btn-add">+ Ajouter un DS</button>
             </div>
             <div class="card" style="flex-grow: 1;">
                 <h2 class="card-title">Travail donné</h2>
@@ -231,6 +257,7 @@
                     <li class="list-item">Grade 11-A Histoire de l'Art:<br>Ébauche du Projet (À rendre le 8 nov.)</li>
                     <li class="list-item">Grade 10-A Histoire : Les démons à l'ère des Shinobis<br>(À rendre vendredi)</li>
                 </ul>
+                <button class="btn-add">+ Ajouter un travail</button>
             </div>
         </div>
 
@@ -241,27 +268,27 @@
                 <div class="subtitle" style="margin-top: 0;">Listes des classes</div>
                 <ul class="list-group">
                     <li class="list-item">Grade 11-A Histoire de l'Art<br>(28 Élèves)</li>
-                    <li class="list-item">Grade 10-A Anglais<br>(25 Élèves)</li>
-                    <li class="list-item">Grade 11-B Histoire<br>(22 Élèves)</li>
+                    <li class="list-item">Grade 10-A Histoire du pays du Sable<br>(25 Élèves)</li>
+                    <li class="list-item">Grade 11-B Histoire des sorts interdits<br>(22 Élèves)</li>
                 </ul>
 
                 <div class="subtitle">Actions rapides</div>
-                <div class="action-item">
+                <button class="action-item">
                     <span class="icon">👤</span>
                     <span>Prendre l'appel<br>(Grade 10-A)</span>
-                </div>
-                <div class="action-item">
+                </button>
+                <button class="action-item">
                     <span class="icon">📝</span>
                     <span>Saisir une Note de Devoir</span>
-                </div>
-                <div class="action-item">
+                </button>
+                <button class="action-item">
                     <span class="icon">📅</span>
                     <span>Planifier un DS futur</span>
-                </div>
-                <div class="action-item">
+                </button>
+                <button class="action-item">
                     <span class="icon">💬</span>
                     <span>Envoyer un message au groupe des parents</span>
-                </div>
+                </button>
             </div>
         </div>
 
@@ -269,7 +296,7 @@
             <div class="card">
                 <h2 class="card-title">Appels à faire</h2>
                 <ul class="list-group">
-                    <li class="list-item">Grade 10-A Anglais<br>(Heure 2 - 10:15)</li>
+                    <li class="list-item">Grade 10-A Histoire<br>(Heure 2 - 10:15)</li>
                     <li class="list-item">Grade 11-B Histoire<br>(Heure 5 - 14:45)</li>
                 </ul>
             </div>
@@ -278,7 +305,7 @@
                 
                 <div class="action-item">
                     <span class="badge badge-pdf">PDF</span>
-                    <span>Chapitre 4 Notes - Grade 10 Anglais</span>
+                    <span>Chapitre 4 Notes - Justu de soins</span>
                 </div>
                 <div class="action-item">
                     <span class="badge badge-docx">DOCX</span>

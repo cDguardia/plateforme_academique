@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'accueil Admin</title>
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 40px;
+            color: #1a1a1a;
+        }
+
+        .status-bar {
+            text-align: right;
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 60px;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border: 1px solid #e6e6e6;
+        }
+
+        .card-title {
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .list-group {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .list-item {
+            font-size: 0.95em;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            line-height: 1.4;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.95em;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .action-item:hover {
+            background-color: #f5f5f5;
+        }
+        .action-item:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+        }
+
+        .btn-add {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        .btn-add:hover {
+            background-color: #0056b3;
+        }
+
+        .main-title {
+            position: absolute;
+            bottom: -30px;
+            right: 0;
+            font-size: 4em;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            .main-title {
+                position: relative;
+                text-align: right;
+                bottom: 0;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        📅 Barre d'état | 28 octobre 2024
+    </div>
+
+    <div class="dashboard">
+
+        <div class="column">
+            <div class="card schedule-card">
+                <h2 class="card-title">Gestion</h2>
+                <button class="action-item"><span class="icon">🆕</span><span>Créer une nouvelle classe</span></button>
+                <button class="action-item"><span class="icon">📅</span><span>Créer un emploi du temps</span></button>
+                <button class="action-item"><span class="icon">➕</span><span>Ajouter un utilisateur</span></button>
+                <button class="action-item"><span class="icon">⚙️</span><span>Paramètres du système</span></button>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <h2 class="card-title">Statistiques</h2>
+                <ul class="list-group">
+                    <li class="list-item">Total élèves : 420</li>
+                    <li class="list-item">Total professeurs : 38</li>
+                    <li class="list-item">Absences aujourd'hui : 12</li>
+                </ul>
+                <button class="btn-add">+ Générer rapport</button>
+            </div>
+            <div class="card" style="flex-grow: 1;">
+                <h2 class="card-title">Approvals</h2>
+                <ul class="list-group">
+                    <li class="list-item">Demandes de vacances : 5 en attente</li>
+                    <li class="list-item">Nouveaux comptes : 3 en attente</li>
+                </ul>
+                <button class="btn-add">+ Examiner les demandes</button>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card" style="height: 100%; box-sizing: border-box;">
+                <h2 class="card-title">Espaces</h2>
+                <button class="action-item"><span class="icon">🏫</span><span>Espace parent</span></button>
+                <button class="action-item"><span class="icon">👨‍🏫</span><span>Espace professeur</span></button>
+                <button class="action-item"><span class="icon">👩‍🎓</span><span>Espace élèves</span></button>
+                <button class="action-item"><span class="icon">🏢</span><span>Espace vie scolaire</span></button>
+                <button class="action-item"><span class="icon">👔</span><span>Espace direction</span></button>
+            </div>
+        </div>
+
+        <div class="main-title">ADMIN</div>
+
+    </div>
+
+</body>
+</html>
