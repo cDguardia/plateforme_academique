@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'accueil Professeurs</title>
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f7f7; /* Gris très clair pour le fond */
+            margin: 0;
+            padding: 40px;
+            color: #1a1a1a;
+        }
+
+        /* Barre d'état en haut à droite */
+        .status-bar {
+            text-align: right;
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Conteneur principal */
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 60px;
+        }
+
+        /* Colonnes */
+        .column {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 20px;
+        }
+
+        /* Style des cartes (boîtes blanches) */
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border: 1px solid #e6e6e6;
+        }
+
+        /* Titres des cartes */
+        .card-title {
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            font-size: 0.85em;
+            color: #777;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        /* --- Colonne 1 : Emploi du temps --- */
+        .schedule-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .slot {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            line-height: 1.3;
+            min-height: 45px;
+        }
+        
+        .slot-orange { background-color: #f3b971; }
+        .slot-grey { background-color: #e0e0e0; }
+        .slot-pink { background-color: #f4a7a7; }
+        
+        .slot-empty-grey {
+            background-color: #eeeeee;
+        }
+        
+        .slot-empty-dashed {
+            border: 1px dashed #bbb;
+            background-color: transparent;
+        }
+
+        /* --- Listes génériques (DS, Travail, Appels) --- */
+        .list-group {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .list-item {
+            font-size: 0.95em;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            line-height: 1.4;
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* --- Actions rapides et Supports --- */
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.95em;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .action-item:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+        }
+
+        /* Badges pour les types de fichiers */
+        .badge {
+            display: inline-block;
+            color: white;
+            font-size: 0.6em;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 35px;
+        }
+        .badge-pdf { background-color: #d32f2f; }
+        .badge-docx { background-color: #1976d2; }
+        .badge-pptx { background-color: #e64a19; }
+        .badge-video { 
+            background-color: transparent; 
+            color: black; 
+            font-size: 1.5em; 
+            padding: 0; 
+            min-width: 35px;
+            text-align: center;
+        }
+
+        /* --- Titre final en bas à droite --- */
+        .main-title {
+            position: absolute;
+            bottom: -30px;
+            right: 0;
+            font-size: 4em;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        /* Responsivité pour les plus petits écrans */
+        @media (max-width: 900px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            .main-title {
+                position: relative;
+                text-align: right;
+                bottom: 0;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        📅 Barre d'état | 28 octobre 2024
+    </div>
+
+    <div class="dashboard">
+        
+        <div class="column">
+            <div class="card schedule-card">
+                <h2 class="card-title">Emploi du temps</h2>
+                
+                <div class="slot slot-orange">
+                    08:30 - 10:00: Histoire des Uchihas - Grade 11 (Classe 667)
+                </div>
+                
+                <div class="slot slot-empty-grey"></div>
+                
+                <div class="slot slot-grey">
+                    10:15 - 11:45: Littérature Japonaise- Grade 10-A (Classe 911)
+                </div>
+                
+                <div class="slot slot-empty-grey"></div>
+                
+                <div class="slot slot-pink">
+                    13:00 - 14:30:Iere Grande Guerre Ninja - Grade 11-A (Classe 404)
+                </div>
+                
+                <div class="slot slot-empty-dashed"></div>
+                <div class="slot slot-empty-dashed"></div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <h2 class="card-title">Prochains DS</h2>
+                <ul class="list-group">
+                    <li class="list-item">Grade 11 Origines du Sharingan(S. 301) - 2 nov.</li>
+                    <li class="list-item">Grade 10 Histoire de l'Akatsuki<br>(En ligne) - 4 nov.</li>
+                </ul>
+            </div>
+            <div class="card" style="flex-grow: 1;">
+                <h2 class="card-title">Travail donné</h2>
+                <ul class="list-group">
+                    <li class="list-item">Grade 11-A Histoire de l'Art:<br>Ébauche du Projet (À rendre le 8 nov.)</li>
+                    <li class="list-item">Grade 10-A Histoire : Les démons à l'ère des Shinobis<br>(À rendre vendredi)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card" style="height: 100%; box-sizing: border-box;">
+                <h2 class="card-title">Mes classes &<br>Actions</h2>
+                
+                <div class="subtitle" style="margin-top: 0;">Listes des classes</div>
+                <ul class="list-group">
+                    <li class="list-item">Grade 11-A Histoire de l'Art<br>(28 Élèves)</li>
+                    <li class="list-item">Grade 10-A Anglais<br>(25 Élèves)</li>
+                    <li class="list-item">Grade 11-B Histoire<br>(22 Élèves)</li>
+                </ul>
+
+                <div class="subtitle">Actions rapides</div>
+                <div class="action-item">
+                    <span class="icon">👤</span>
+                    <span>Prendre l'appel<br>(Grade 10-A)</span>
+                </div>
+                <div class="action-item">
+                    <span class="icon">📝</span>
+                    <span>Saisir une Note de Devoir</span>
+                </div>
+                <div class="action-item">
+                    <span class="icon">📅</span>
+                    <span>Planifier un DS futur</span>
+                </div>
+                <div class="action-item">
+                    <span class="icon">💬</span>
+                    <span>Envoyer un message au groupe des parents</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <h2 class="card-title">Appels à faire</h2>
+                <ul class="list-group">
+                    <li class="list-item">Grade 10-A Anglais<br>(Heure 2 - 10:15)</li>
+                    <li class="list-item">Grade 11-B Histoire<br>(Heure 5 - 14:45)</li>
+                </ul>
+            </div>
+            <div class="card" style="flex-grow: 1;">
+                <h2 class="card-title">Supports de cours</h2>
+                
+                <div class="action-item">
+                    <span class="badge badge-pdf">PDF</span>
+                    <span>Chapitre 4 Notes - Grade 10 Anglais</span>
+                </div>
+                <div class="action-item">
+                    <span class="badge badge-docx">DOCX</span>
+                    <span>Sujet de Projet - Grade 11 Art</span>
+                </div>
+                <div class="action-item">
+                    <span class="badge badge-pptx">PPTX</span>
+                    <span>Diapositives sur les Éres Historiques - Grade 11 Histoire</span>
+                </div>
+                <div class="action-item">
+                    <span class="badge badge-video">▶️</span>
+                    <span>Interview sur le Post-Impressionnisme</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-title">PROFS</div>
+
+    </div>
+
+</body>
+</html>

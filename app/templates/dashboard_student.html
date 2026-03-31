@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'accueil Élèves</title>
+    <style>
+        /* Styles de base pour la page */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 40px;
+            color: black;
+        }
+        
+        /* Conteneur principal (Grille Flexbox) */
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 80px; /* Espace pour le gros titre "Eleves" en bas */
+        }
+
+        /* Colonnes */
+        .column {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 15px;
+        }
+
+        /* Style général des boîtes (cadres noirs) */
+        .box {
+            border: 2px solid black;
+            background-color: white;
+        }
+
+        .box-title {
+            text-align: center;
+            font-size: 1.2em;
+            margin: 15px 0;
+        }
+
+        /* --- Colonne 1 : Emploi du temps --- */
+        .schedule-box {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .schedule-box .box-title {
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .slot {
+            border-top: 2px solid black;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 40px; /* Hauteur des cases vides */
+        }
+        .slot-tall {
+            min-height: 100px; /
+        }
+        .slot strong {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        /* Couleurs des matières */
+        .bg-orange { background-color: #eab464; }
+        .bg-blue { background-color: #7a58e9; }
+        .bg-green { background-color: #7eea7e; }
+
+        /* --- Colonne 2 : Prochains DS et Travail --- */
+        .ds-box {
+            min-height: 100px;
+        }
+        .homework-box {
+            flex-grow: 1;
+            padding: 10px;
+            text-align: center;
+        }
+        .homework-content {
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+        .homework-content ul {
+            text-align: left;
+            margin-top: 5px;
+            padding-left: 20px;
+            display: inline-block; /* Pour centrer la liste tout en gardant l'alignement à gauche des puces */
+        }
+
+        /* --- Colonne 3 : Dernières notes --- */
+        .notes-box {
+            height: 100%;
+        }
+
+        /* --- Colonne 4 : Absences et Retards --- */
+        .absences-box, .retards-box {
+            min-height: 150px;
+        }
+
+        /* --- Titre final en bas à droite --- */
+        .main-title {
+            position: absolute;
+            bottom: -20px;
+            right: 0;
+            font-size: 4em;
+            font-weight: bold;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        
+        <div class="column">
+            <div class="box schedule-box">
+                <div class="box-title">Emploi du temps</div>
+                
+                <div class="slot slot-tall bg-orange">
+                    <strong>Multiclonage</strong>
+                    <span>Uzumaki Naruto</span>
+                </div>
+                
+                <div class="slot"></div>
+                
+                <div class="slot bg-blue">
+                    <strong>Sciences</strong>
+                    <span>Orochimaru</span>
+                </div>
+                
+                <div class="slot bg-green">
+                    <strong>Taijutsu</strong>
+                    <span>Rock Lee</span>
+                </div>
+                
+                <div class="slot"></div>
+                <div class="slot"></div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="box ds-box">
+                <div class="box-title">Prochains DS</div>
+            </div>
+            <div class="box homework-box">
+                <div class="box-title">Travail à faire</div>
+                <div class="homework-content">
+                    Choisis trois pays que Johnny a visités.<br>
+                    Pour chaque pays, trouve :
+                    <ul>
+                        <li>la capitale</li>
+                        <li>le monument</li>
+                        <li>un batiment célèbre</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="box notes-box">
+                <div class="box-title">Dernières notes</div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="box absences-box">
+                <div class="box-title">Absences</div>
+            </div>
+            <div class="box retards-box">
+                <div class="box-title">Retards</div>
+            </div>
+        </div>
+
+        <div class="main-title">Eleves</div>
+
+    </div>
+
+</body>
+</html>
