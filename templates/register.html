@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .auth-wrap { width: 100%; max-width: 480px; }
+  .auth-logo { text-align: center; margin-bottom: 28px; }
+  .auth-logo .icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #00c4ff, #7b5cfa);
+    border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 10px;
+  }
+  .auth-logo h1 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .auth-logo p { font-size: 13px; color: var(--text-dim); }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .auth-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+  .auth-card .subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
+  .btn-submit {
+    width: 100%; padding: 11px;
+    background: linear-gradient(135deg, #00c4ff, #7b5cfa);
+    border: none; border-radius: 6px;
+    color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-submit:hover { opacity: 0.9; }
+  .role-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .role-option input { display: none; }
+  .role-option label {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 12px 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .role-option label .emoji { font-size: 20px; }
+  .role-option input:checked + label {
+    border-color: #00c4ff;
+    color: #00c4ff;
+    background: rgba(0,196,255,0.06);
+  }
+  .role-option label:hover { border-color: var(--text-muted); color: var(--text); }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div class="auth-wrap">
+  <div class="auth-logo">
+    <div class="icon">🎓</div>
+    <h1>Guardia <span style="color:#00c4ff">EDU</span></h1>
+    <p>Créer un compte</p>
+  </div>
+
+  <div class="auth-card">
+    <h2>Inscription</h2>
+    <p class="subtitle">Renseignez vos informations pour créer votre compte.</p>
+
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom:16px;">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('auth.register') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <input type="text" id="username" name="username"
+                 placeholder="jean.dupont"
+                 value="{{ form.username.data or '' }}"
+                 autocomplete="username" required>
+          {% if form.username.errors %}
+            {% for e in form.username.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+          {% endif %}
+        </div>
+        <div class="form-group">
+          <label for="email">Adresse e-mail</label>
+          <input type="email" id="email" name="email"
+                 placeholder="jean@guardia.school"
+                 value="{{ form.email.data or '' }}"
+                 autocomplete="email" required>
+          {% if form.email.errors %}
+            {% for e in form.email.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Rôle</label>
+        <div class="role-options">
+          <div class="role-option">
+            <input type="radio" id="role-student" name="role" value="student"
+                   {% if not form.role.data or form.role.data == 'student' %}checked{% endif %}>
+            <label for="role-student">
+              <span class="emoji">🎓</span>
+              Étudiant
+            </label>
+          </div>
+          <div class="role-option">
+            <input type="radio" id="role-professor" name="role" value="professor"
+                   {% if form.role.data == 'professor' %}checked{% endif %}>
+            <label for="role-professor">
+              <span class="emoji">👨‍🏫</span>
+              Professeur
+            </label>
+          </div>
+          <div class="role-option">
+            <input type="radio" id="role-admin" name="role" value="admin"
+                   {% if form.role.data == 'admin' %}checked{% endif %}>
+            <label for="role-admin">
+              <span class="emoji">👑</span>
+              Admin
+            </label>
+          </div>
+        </div>
+        {% if form.role.errors %}
+          {% for e in form.role.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password"
+               placeholder="Minimum 8 caractères"
+               autocomplete="new-password" required>
+        <div class="form-hint">8 caractères min., incluez majuscule, chiffre et caractère spécial.</div>
+        {% if form.password.errors %}
+          {% for e in form.password.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm">Confirmer le mot de passe</label>
+        <input type="password" id="password_confirm" name="password_confirm"
+               placeholder="••••••••"
+               autocomplete="new-password" required>
+        {% if form.password_confirm.errors %}
+          {% for e in form.password_confirm.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn-submit">Créer mon compte</button>
+    </form>
+
+    <div style="text-align:center; margin-top:20px; font-size:13px; color:var(--text-dim);">
+      Déjà inscrit ?
+      <a href="{{ url_for('auth.login') }}" style="color:#00c4ff;">Se connecter</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
