@@ -1,0 +1,218 @@
+ 13           0 RESUME                   0
+
+ 14           2 LOAD_GLOBAL              1 (NULL + Flask)
+             14 LOAD_GLOBAL              2 (__name__)
+             26 LOAD_CONST               1 ('templates')
+             28 KW_NAMES                 2
+             30 PRECALL                  2
+             34 CALL                     2
+             44 STORE_FAST               1 (app)
+
+ 15          46 LOAD_FAST                0 (config_name)
+             48 JUMP_IF_TRUE_OR_POP     31 (to 112)
+             50 LOAD_GLOBAL              4 (os)
+             62 LOAD_ATTR                3 (environ)
+             72 LOAD_METHOD              4 (get)
+             94 LOAD_CONST               3 ('FLASK_CONFIG')
+             96 LOAD_CONST               4 ('DevelopmentConfig')
+             98 PRECALL                  2
+            102 CALL                     2
+        >>  112 STORE_FAST               0 (config_name)
+
+ 16         114 LOAD_FAST                0 (config_name)
+            116 LOAD_CONST               4 ('DevelopmentConfig')
+            118 COMPARE_OP               2 (==)
+            124 POP_JUMP_FORWARD_IF_FALSE     7 (to 140)
+            126 LOAD_GLOBAL             10 (DevelopmentConfig)
+            138 JUMP_FORWARD             6 (to 152)
+        >>  140 LOAD_GLOBAL             12 (ProductionConfig)
+        >>  152 STORE_FAST               2 (config)
+
+ 17         154 LOAD_FAST                1 (app)
+            156 LOAD_ATTR                7 (config)
+            166 LOAD_METHOD              8 (from_object)
+            188 LOAD_FAST                2 (config)
+            190 PRECALL                  1
+            194 CALL                     1
+            204 POP_TOP
+
+ 19         206 LOAD_GLOBAL             19 (NULL + db)
+            218 LOAD_ATTR               10 (init_app)
+            228 LOAD_FAST                1 (app)
+            230 PRECALL                  1
+            234 CALL                     1
+            244 POP_TOP
+
+ 20         246 LOAD_GLOBAL             23 (NULL + login_manager)
+            258 LOAD_ATTR               10 (init_app)
+            268 LOAD_FAST                1 (app)
+            270 PRECALL                  1
+            274 CALL                     1
+            284 POP_TOP
+
+ 21         286 LOAD_GLOBAL             25 (NULL + csrf)
+            298 LOAD_ATTR               10 (init_app)
+            308 LOAD_FAST                1 (app)
+            310 PRECALL                  1
+            314 CALL                     1
+            324 POP_TOP
+
+ 22         326 LOAD_GLOBAL             27 (NULL + bcrypt)
+            338 LOAD_ATTR               10 (init_app)
+            348 LOAD_FAST                1 (app)
+            350 PRECALL                  1
+            354 CALL                     1
+            364 POP_TOP
+
+ 24         366 LOAD_FAST                1 (app)
+            368 LOAD_METHOD             14 (register_blueprint)
+            390 LOAD_GLOBAL             30 (auth_bp)
+            402 PRECALL                  1
+            406 CALL                     1
+            416 POP_TOP
+
+ 25         418 LOAD_FAST                1 (app)
+            420 LOAD_METHOD             14 (register_blueprint)
+            442 LOAD_GLOBAL             32 (admin_bp)
+            454 LOAD_CONST               5 ('/admin')
+            456 KW_NAMES                 6
+            458 PRECALL                  2
+            462 CALL                     2
+            472 POP_TOP
+
+ 26         474 LOAD_FAST                1 (app)
+            476 LOAD_METHOD             14 (register_blueprint)
+            498 LOAD_GLOBAL             34 (professor_bp)
+            510 LOAD_CONST               7 ('/professor')
+            512 KW_NAMES                 6
+            514 PRECALL                  2
+            518 CALL                     2
+            528 POP_TOP
+
+ 27         530 LOAD_FAST                1 (app)
+            532 LOAD_METHOD             14 (register_blueprint)
+            554 LOAD_GLOBAL             36 (student_bp)
+            566 LOAD_CONST               8 ('/student')
+            568 KW_NAMES                 6
+            570 PRECALL                  2
+            574 CALL                     2
+            584 POP_TOP
+
+ 29         586 LOAD_FAST                1 (app)
+            588 LOAD_METHOD             19 (errorhandler)
+            610 LOAD_CONST               9 (403)
+            612 PRECALL                  1
+            616 CALL                     1
+
+ 30         626 LOAD_CONST              10 (<code object forbidden at 0x00000290593ED990, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 29>)
+            628 MAKE_FUNCTION            0
+
+ 29         630 PRECALL                  0
+            634 CALL                     0
+
+ 30         644 STORE_FAST               3 (forbidden)
+
+ 33         646 LOAD_FAST                1 (app)
+            648 LOAD_METHOD             19 (errorhandler)
+            670 LOAD_CONST              11 (404)
+            672 PRECALL                  1
+            676 CALL                     1
+
+ 34         686 LOAD_CONST              12 (<code object not_found at 0x00000290593EDC30, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 33>)
+            688 MAKE_FUNCTION            0
+
+ 33         690 PRECALL                  0
+            694 CALL                     0
+
+ 34         704 STORE_FAST               4 (not_found)
+
+ 37         706 LOAD_FAST                1 (app)
+            708 LOAD_METHOD             19 (errorhandler)
+            730 LOAD_CONST              13 (500)
+            732 PRECALL                  1
+            736 CALL                     1
+
+ 38         746 LOAD_CONST              14 (<code object server_error at 0x000002905944CC70, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 37>)
+            748 MAKE_FUNCTION            0
+
+ 37         750 PRECALL                  0
+            754 CALL                     0
+
+ 38         764 STORE_FAST               5 (server_error)
+
+ 41         766 LOAD_FAST                1 (app)
+            768 LOAD_METHOD             20 (app_context)
+            790 PRECALL                  0
+            794 CALL                     0
+            804 BEFORE_WITH
+            806 POP_TOP
+
+ 42         808 LOAD_CONST              15 (0)
+            810 LOAD_CONST               0 (None)
+            812 IMPORT_NAME             21 (app.models)
+            814 STORE_FAST               1 (app)
+
+ 43         816 LOAD_GLOBAL             19 (NULL + db)
+            828 LOAD_ATTR               22 (create_all)
+            838 PRECALL                  0
+            842 CALL                     0
+            852 POP_TOP
+
+ 41         854 LOAD_CONST               0 (None)
+            856 LOAD_CONST               0 (None)
+            858 LOAD_CONST               0 (None)
+            860 PRECALL                  2
+            864 CALL                     2
+            874 POP_TOP
+            876 JUMP_FORWARD            11 (to 900)
+        >>  878 PUSH_EXC_INFO
+            880 WITH_EXCEPT_START
+            882 POP_JUMP_FORWARD_IF_TRUE     4 (to 892)
+            884 RERAISE                  2
+        >>  886 COPY                     3
+            888 POP_EXCEPT
+            890 RERAISE                  1
+        >>  892 POP_TOP
+            894 POP_EXCEPT
+            896 POP_TOP
+            898 POP_TOP
+
+ 45     >>  900 LOAD_FAST                1 (app)
+            902 RETURN_VALUE
+ExceptionTable:
+  806 to 852 -> 878 [1] lasti
+  878 to 884 -> 886 [3] lasti
+  892 to 892 -> 886 [3] lasti
+
+Disassembly of <code object forbidden at 0x00000290593ED990, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 29>:
+ 29           0 RESUME                   0
+
+ 31           2 LOAD_GLOBAL              1 (NULL + render_template)
+             14 LOAD_CONST               1 ('403.html')
+             16 PRECALL                  1
+             20 CALL                     1
+             30 LOAD_CONST               2 (403)
+             32 BUILD_TUPLE              2
+             34 RETURN_VALUE
+
+Disassembly of <code object not_found at 0x00000290593EDC30, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 33>:
+ 33           0 RESUME                   0
+
+ 35           2 LOAD_GLOBAL              1 (NULL + render_template)
+             14 LOAD_CONST               1 ('404.html')
+             16 PRECALL                  1
+             20 CALL                     1
+             30 LOAD_CONST               2 (404)
+             32 BUILD_TUPLE              2
+             34 RETURN_VALUE
+
+Disassembly of <code object server_error at 0x000002905944CC70, file "C:\Users\mocke\Desktop\test\app\__init__.py", line 37>:
+ 37           0 RESUME                   0
+
+ 39           2 LOAD_GLOBAL              1 (NULL + render_template)
+             14 LOAD_CONST               1 ('500.html')
+             16 PRECALL                  1
+             20 CALL                     1
+             30 LOAD_CONST               2 (500)
+             32 BUILD_TUPLE              2
+             34 RETURN_VALUE
