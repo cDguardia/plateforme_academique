@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+import re
+
+from flask_wtf import FlaskForm
+from wtforms import BooleanField, IntegerField, PasswordField, SelectField, StringField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
+
+from app.models import User
+
+
+# ─── VALIDATION HELPERS ──────────────────────────────────────────────────────
+
+def _validate_password_strength(form, field) -> None:  # noqa: ANN001
+    pwd = field.data or ""
+    if len(pwd) < 8:
+        raise ValidationError("Le mot de passe doit contenir au moins 8 caractères.")
+    if not re.search(r"[A-Z]", pwd):
+        raise ValidationError("Le mot de passe doit contenir au moins une majuscule.")
+    if not re.search(r"\d", pwd):
+        raise ValidationError("Le mot de passe doit contenir au moins un chiffre.")
+    if not re.search(r"[^A-Za-z0-9]", pwd):
+        raise ValidationError("Le mot de passe doit contenir au moins un caractère spécial.")
+
+
+# ─── AUTH FORMS ──────────────────────────────────────────────────────────────
+
+class LoginForm(FlaskForm):
+    username = StringField(
+        "Nom d'utilisateur",
+        validators=[DataRequired("Ce champ est requis."), Length(max=80)],
+    )
+    password = PasswordField(
+        "Mot de passe",
+        validators=[DataRequired("Ce champ est requis.")],
+    )
+
+
+class RegisterForm(FlaskForm):
+    username = StringField(
+        "Nom d'utilisateur",
+        validators=[DataRequired(), Length(min=3, max=80)],
+    )
+    email = StringField(
+        "Adresse e-mail",
+        validators=[DataRequired(), Email("Adresse e-mail invalide."), Length(max=120)],
+    )
+    role = SelectField(
+        "Rôle",
+        choices=[("student", "Étudiant"), ("professor", "Professeur"), ("admin", "Admin")],
+        validators=[DataRequired()],
+    )
+    password = PasswordField(
+        "Mot de passe",
+        validators=[DataRequired(), _validate_password_strength],
+    )
+    password_confirm = PasswordField(
+        "Confirmer le mot de passe",
+        validators=[DataRequired(), EqualTo("password", "Les mots de passe ne correspondent pas.")],
+    )
+
+    def validate_username(self, field) -> None:  # noqa: ANN001
+        if User.query.filter_by(username=field.data.strip()).first():
+            raise ValidationError("Ce nom d'utilisateur est déjà pris.")
+
+    def validate_email(self, field) -> None:  # noqa: ANN001
+        if User.query.filter_by(email=field.data.strip().lower()).first():
+            raise ValidationError("Cette adresse e-mail est déjà utilisée.")
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField(
+        "Mot de passe actuel",
+        validators=[DataRequired()],
+    )
+    new_password = PasswordField(
+        "Nouveau mot de passe",
+        validators=[DataRequired(), _validate_password_strength],
+    )
+    new_password_confirm = PasswordField(
+        "Confirmer le nouveau mot de passe",
+        validators=[DataRequired(), EqualTo("new_password", "Les mots de passe ne correspondent pas.")],
+    )
+
+
+# ─── ADMIN FORMS ─────────────────────────────────────────────────────────────
+
+class UserCreateForm(FlaskForm):
+    username = StringField("Nom d'utilisateur", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
+    role = SelectField(
+        "Rôle",
+        choices=[("student", "Étudiant"), ("professor", "Professeur"), ("admin", "Admin")],
+        validators=[DataRequired()],
+    )
+    password = PasswordField("Mot de passe", validators=[DataRequired(), _validate_password_strength])
+    password_confirm = PasswordField(
+        "Confirmer",
+        validators=[DataRequired(), EqualTo("password", "Mots de passe différents.")],
+    )
+    is_active = BooleanField("Compte actif", default=True)
+
+    def validate_username(self, field) -> None:  # noqa: ANN001
+        if User.query.filter_by(username=field.data.strip()).first():
+            raise ValidationError("Nom d'utilisateur déjà pris.")
+
+    def validate_email(self, field) -> None:  # noqa: ANN001
+        if User.query.filter_by(email=field.data.strip().lower()).first():
+            raise ValidationError("Email déjà utilisé.")
+
+
+class UserEditForm(FlaskForm):
+    username = StringField("Nom d'utilisateur", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
+    role = SelectField(
+        "Rôle",
+        choices=[("student", "Étudiant"), ("professor", "Professeur"), ("admin", "Admin")],
+        validators=[DataRequired()],
+    )
+    is_active = BooleanField("Compte actif")
+
+
+# ─── COURSE FORMS ────────────────────────────────────────────────────────────
+
+class CourseForm(FlaskForm):
+    name = StringField("Intitulé du cours", validators=[DataRequired(), Length(max=200)])
+    code = StringField("Code", validators=[DataRequired(), Length(max=20)])
+    class_name = StringField("Classe cible", validators=[DataRequired(), Length(max=50)])
+    credits = IntegerField("Crédits ECTS", validators=[DataRequired(), NumberRange(min=1, max=30)])
+    description = TextAreaField("Description", validators=[Optional(), Length(max=2000)])
+
+
+# ─── PROFILE FORMS ───────────────────────────────────────────────────────────
+
+class ProfileProfessorForm(FlaskForm):
+    department = StringField("Département", validators=[Optional(), Length(max=100)])
+    specialization = TextAreaField("Spécialisation", validators=[Optional(), Length(max=500)])
+
+
+class ProfileStudentForm(FlaskForm):
+    username = StringField("Nom d'utilisateur", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
