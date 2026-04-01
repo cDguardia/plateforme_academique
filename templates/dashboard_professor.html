@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord Professeur{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon blue">📚</div>
+    <div>
+      <div class="stat-value">{{ stats.my_courses }}</div>
+      <div class="stat-label">Mes cours</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">🎓</div>
+    <div>
+      <div class="stat-value">{{ stats.total_students }}</div>
+      <div class="stat-label">Étudiants au total</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warn">📝</div>
+    <div>
+      <div class="stat-value">{{ stats.grades_given }}</div>
+      <div class="stat-label">Notes attribuées</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple">⏳</div>
+    <div>
+      <div class="stat-value">{{ stats.pending_grades }}</div>
+      <div class="stat-label">Notes en attente</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:20px;">
+
+  <!-- Mes cours -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📚 Mes cours</div>
+      <div class="flex-row gap-8">
+        <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary btn-sm">+ Nouveau cours</a>
+        <a href="{{ url_for('professor.courses') }}" class="btn btn-outline btn-sm">Tous</a>
+      </div>
+    </div>
+    {% if my_courses %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cours</th>
+            <th>Classe</th>
+            <th>Étudiants</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for course in my_courses %}
+          <tr>
+            <td>
+              <div class="td-name">{{ course.name }}</div>
+              <div style="font-size:11px; color:var(--text-muted);">{{ course.code }}</div>
+            </td>
+            <td><span class="badge badge-blue">{{ course.class_name }}</span></td>
+            <td>{{ course.student_count }}</td>
+            <td>
+              <a href="{{ url_for('professor.course_grades', id=course.id) }}"
+                 class="btn btn-outline btn-sm">Notes</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📚</div>
+      <p>Vous n'avez pas encore de cours.</p>
+      <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary" style="margin-top:12px;">Créer un cours</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Dernières notes données -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📝 Dernières notes attribuées</div>
+    </div>
+    {% if recent_grades %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Étudiant</th>
+            <th>Cours</th>
+            <th>Note</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grade in recent_grades %}
+          <tr>
+            <td class="td-name">{{ grade.student_name }}</td>
+            <td style="font-size:12px; color:var(--text-dim);">{{ grade.course_name }}</td>
+            <td>
+              <span class="badge {% if grade.value >= 10 %}badge-green{% else %}badge-red{% endif %}">
+                {{ grade.value }}/20
+              </span>
+            </td>
+            <td style="font-size:12px;">{{ grade.graded_at.strftime('%d/%m') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📝</div>
+      <p>Aucune note attribuée récemment.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
