@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Logs d'audit{% endblock %}
+{% block page_title %}Logs d'audit{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div style="display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap;">
+  <form method="get" style="display:flex; gap:8px; flex-wrap:wrap;">
+    <input type="text" name="q" value="{{ request.args.get('q','') }}"
+           placeholder="Rechercher action, utilisateur..."
+           style="width:240px;">
+    <input type="date" name="date_from" value="{{ request.args.get('date_from','') }}"
+           style="width:150px;">
+    <input type="date" name="date_to"   value="{{ request.args.get('date_to','') }}"
+           style="width:150px;">
+    <button type="submit" class="btn btn-outline">🔍 Filtrer</button>
+    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline">✕ Réinitialiser</a>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">📋 Journal d'audit</div>
+    <span style="font-size:12px; color:var(--text-muted);">{{ logs.total }} entrée(s)</span>
+  </div>
+
+  {% if logs.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Horodatage</th>
+          <th>Utilisateur</th>
+          <th>Action</th>
+          <th>Ressource</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs.items %}
+        <tr>
+          <td style="font-family:monospace; font-size:12px; white-space:nowrap; color:var(--text-dim);">
+            {{ log.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+          </td>
+          <td class="td-name">{{ log.username or '—' }}</td>
+          <td>
+            <span class="badge
+              {% if 'login' in log.action %}badge-green
+              {% elif 'logout' in log.action %}badge-gray
+              {% elif 'delete' in log.action or '403' in log.action %}badge-red
+              {% elif 'create' in log.action or 'register' in log.action %}badge-blue
+              {% elif 'edit' in log.action or 'update' in log.action %}badge-warn
+              {% else %}badge-gray{% endif %}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td style="font-size:12px; color:var(--text-dim);">
+            {% if log.resource_type %}
+              {{ log.resource_type }}{% if log.resource_id %} #{{ log.resource_id }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-family:monospace; font-size:12px; color:var(--text-muted);">
+            {{ log.ip_address or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if logs.pages > 1 %}
+  <div style="padding:16px 20px; display:flex; align-items:center; gap:8px; border-top:1px solid var(--border);">
+    {% if logs.has_prev %}
+    <a href="{{ url_for('admin.audit_logs', page=logs.prev_num, **request.args) }}"
+       class="btn btn-outline btn-sm">← Précédent</a>
+    {% endif %}
+    <span style="font-size:12px; color:var(--text-muted);">
+      Page {{ logs.page }} / {{ logs.pages }}
+    </span>
+    {% if logs.has_next %}
+    <a href="{{ url_for('admin.audit_logs', page=logs.next_num, **request.args) }}"
+       class="btn btn-outline btn-sm">Suivant →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📋</div>
+    <p>Aucun log trouvé pour ces critères.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

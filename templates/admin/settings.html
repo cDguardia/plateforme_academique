@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres{% endblock %}
+{% block page_title %}Paramètres{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+
+  <!-- Session -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">🔑 Sécurité des sessions</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="session">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="session_lifetime">Durée de session (minutes)</label>
+            <input type="number" id="session_lifetime" name="session_lifetime"
+                   value="{{ settings.session_lifetime or 30 }}"
+                   min="5" max="1440">
+            <div class="form-hint">Durée d'inactivité avant déconnexion automatique.</div>
+          </div>
+          <div class="form-group">
+            <label>Options de sécurité</label>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
+                             font-size:13px; font-weight:400; cursor:pointer;">
+                <input type="checkbox" name="session_secure" value="1"
+                       {% if settings.session_secure %}checked{% endif %}
+                       style="width:auto;">
+                Cookie Secure (HTTPS uniquement)
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
+                             font-size:13px; font-weight:400; cursor:pointer;">
+                <input type="checkbox" name="session_httponly" value="1"
+                       {% if settings.session_httponly %}checked{% endif %}
+                       style="width:auto;">
+                HttpOnly (inaccessible en JS)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Politique de mots de passe -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">🔒 Politique de mots de passe</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="password">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="pwd_min_length">Longueur minimale</label>
+            <input type="number" id="pwd_min_length" name="pwd_min_length"
+                   value="{{ settings.pwd_min_length or 8 }}" min="6" max="128">
+          </div>
+          <div class="form-group">
+            <label>Complexité requise</label>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
+              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
+                             font-size:13px; font-weight:400; cursor:pointer;">
+                <input type="checkbox" name="pwd_require_upper" value="1"
+                       {% if settings.pwd_require_upper %}checked{% endif %}
+                       style="width:auto;">
+                Majuscule obligatoire
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
+                             font-size:13px; font-weight:400; cursor:pointer;">
+                <input type="checkbox" name="pwd_require_digit" value="1"
+                       {% if settings.pwd_require_digit %}checked{% endif %}
+                       style="width:auto;">
+                Chiffre obligatoire
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
+                             font-size:13px; font-weight:400; cursor:pointer;">
+                <input type="checkbox" name="pwd_require_special" value="1"
+                       {% if settings.pwd_require_special %}checked{% endif %}
+                       style="width:auto;">
+                Caractère spécial obligatoire
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Informations système -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">ℹ️ Informations système</div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        {% for key, val in system_info.items() %}
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:8px 0; border-bottom:1px solid var(--border);">
+          <span style="font-size:13px; color:var(--text-dim);">{{ key }}</span>
+          <span style="font-family:monospace; font-size:12px; color:var(--accent);">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
