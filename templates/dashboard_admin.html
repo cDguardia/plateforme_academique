@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord Admin{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon purple">👥</div>
+    <div>
+      <div class="stat-value">{{ stats.total_users }}</div>
+      <div class="stat-label">Utilisateurs total</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue">👨‍🏫</div>
+    <div>
+      <div class="stat-value">{{ stats.professors }}</div>
+      <div class="stat-label">Professeurs</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">🎓</div>
+    <div>
+      <div class="stat-value">{{ stats.students }}</div>
+      <div class="stat-label">Étudiants</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warn">📚</div>
+    <div>
+      <div class="stat-value">{{ stats.courses }}</div>
+      <div class="stat-label">Cours actifs</div>
+    </div>
+  </div>
+</div>
+
+<!-- Grid : actions rapides + derniers logs -->
+<div class="grid-2" style="gap:20px;">
+
+  <!-- Actions rapides -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">⚡ Actions rapides</div>
+    </div>
+    <div class="card-body" style="display:flex; flex-direction:column; gap:10px;">
+      <a href="{{ url_for('admin.user_create') }}" class="btn btn-primary">
+        ➕ Créer un utilisateur
+      </a>
+      <a href="{{ url_for('admin.users') }}" class="btn btn-outline">
+        👥 Gérer les utilisateurs
+      </a>
+      <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline">
+        📋 Consulter les logs d'audit
+      </a>
+      <a href="{{ url_for('admin.statistics') }}" class="btn btn-outline">
+        📈 Voir les statistiques
+      </a>
+    </div>
+  </div>
+
+  <!-- Derniers logs d'audit -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 Dernières activités</div>
+      <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline btn-sm">Tout voir</a>
+    </div>
+    {% if recent_logs %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Action</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in recent_logs %}
+          <tr>
+            <td class="td-name">{{ log.username or '—' }}</td>
+            <td>
+              <span class="badge badge-{% if 'login' in log.action %}green{% elif 'delete' in log.action %}red{% elif 'error' in log.action or '403' in log.action %}red{% else %}blue{% endif %}">
+                {{ log.action }}
+              </span>
+            </td>
+            <td style="font-size:12px;">{{ log.timestamp.strftime('%d/%m %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <p>Aucune activité récente.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}
