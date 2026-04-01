@@ -127,6 +127,102 @@
             letter-spacing: 2px;
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-header {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.95em;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+        }
+
+        .form-group input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-done {
+            flex: 1;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-done:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background-color: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background-color: #d0d0d0;
+        }
+
         @media (max-width: 900px) {
             .dashboard {
                 flex-direction: column;
@@ -151,7 +247,7 @@
         <div class="column">
             <div class="card schedule-card">
                 <h2 class="card-title">Gestion</h2>
-                <button class="action-item"><span class="icon">🆕</span><span>Créer une nouvelle classe</span></button>
+                <button class="action-item" id="createClassBtn"><span class="icon">🆕</span><span>Créer une nouvelle classe</span></button>
                 <button class="action-item"><span class="icon">📅</span><span>Créer un emploi du temps</span></button>
                 <button class="action-item"><span class="icon">➕</span><span>Ajouter un utilisateur</span></button>
                 <button class="action-item"><span class="icon">⚙️</span><span>Paramètres du système</span></button>
@@ -192,6 +288,65 @@
         <div class="main-title">ADMIN</div>
 
     </div>
+
+    <!-- Modal for Creating Class -->
+    <div id="createClassModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Créer une nouvelle classe</div>
+            <form id="createClassForm">
+                <div class="form-group">
+                    <label for="className">Nom de la classe</label>
+                    <input type="text" id="className" name="className" placeholder="Ex: Grade 11-A" required>
+                </div>
+                <div class="form-group">
+                    <label for="classSize">Nombre d'effectifs</label>
+                    <input type="number" id="classSize" name="classSize" placeholder="Ex: 30" min="1" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-done">Done</button>
+                    <button type="button" class="btn-cancel" id="cancelBtn">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const createClassBtn = document.getElementById('createClassBtn');
+        const createClassModal = document.getElementById('createClassModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const createClassForm = document.getElementById('createClassForm');
+
+        // Open modal
+        createClassBtn.addEventListener('click', function() {
+            createClassModal.style.display = 'block';
+        });
+
+        // Close modal
+        cancelBtn.addEventListener('click', function() {
+            createClassModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside the modal content
+        window.addEventListener('click', function(event) {
+            if (event.target === createClassModal) {
+                createClassModal.style.display = 'none';
+            }
+        });
+
+        // Handle form submission
+        createClassForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const className = document.getElementById('className').value;
+            const classSize = document.getElementById('classSize').value;
+            
+            console.log('Classe créée:', { className, classSize });
+            alert(`Classe "${className}" avec ${classSize} élèves créée avec succès!`);
+            
+            // Reset form and close modal
+            createClassForm.reset();
+            createClassModal.style.display = 'none';
+        });
+    </script>
 
 </body>
 </html>
