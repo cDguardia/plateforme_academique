@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des utilisateurs{% endblock %}
+{% block page_title %}Utilisateurs{% endblock %}
+
+{% block content %}
+
+<!-- Toolbar -->
+<div class="flex-between mb-24">
+  <div style="display:flex; gap:10px; align-items:center;">
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <input type="text" name="q" value="{{ request.args.get('q','') }}"
+             placeholder="Rechercher un utilisateur..."
+             style="width:260px;">
+      <select name="role" style="width:140px;">
+        <option value="">Tous les rôles</option>
+        <option value="admin"     {% if request.args.get('role')=='admin' %}selected{% endif %}>Admin</option>
+        <option value="professor" {% if request.args.get('role')=='professor' %}selected{% endif %}>Professeur</option>
+        <option value="student"   {% if request.args.get('role')=='student' %}selected{% endif %}>Étudiant</option>
+      </select>
+      <button type="submit" class="btn btn-outline">🔍 Filtrer</button>
+    </form>
+  </div>
+  <a href="{{ url_for('admin.user_create') }}" class="btn btn-primary">➕ Créer un utilisateur</a>
+</div>
+
+<!-- Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">👥 Liste des utilisateurs</div>
+    <span style="font-size:12px; color:var(--text-muted);">{{ users|length }} utilisateur(s)</span>
+  </div>
+  {% if users %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Créé le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:32px; height:32px; border-radius:50%;
+                          background:linear-gradient(135deg,var(--purple),var(--accent));
+                          display:flex; align-items:center; justify-content:center;
+                          font-weight:700; font-size:13px; color:#fff; flex-shrink:0;">
+                {{ user.username[0].upper() }}
+              </div>
+              <span class="td-name">{{ user.username }}</span>
+            </div>
+          </td>
+          <td style="font-size:13px;">{{ user.email }}</td>
+          <td>
+            <span class="badge
+              {% if user.role == 'admin' %}badge-purple
+              {% elif user.role == 'professor' %}badge-blue
+              {% else %}badge-green{% endif %}">
+              {{ user.role }}
+            </span>
+          </td>
+          <td>
+            {% if user.is_active %}
+              <span class="badge badge-green">● Actif</span>
+            {% else %}
+              <span class="badge badge-red">● Inactif</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px; color:var(--text-dim);">
+            {{ user.created_at.strftime('%d/%m/%Y') }}
+          </td>
+          <td>
+            <div class="flex-row gap-8">
+              <a href="{{ url_for('admin.user_edit', id=user.id) }}"
+                 class="btn btn-outline btn-sm">✏️ Éditer</a>
+              <form method="post" action="{{ url_for('admin.user_reset_password', id=user.id) }}"
+                    onsubmit="return confirm('Réinitialiser le mot de passe de {{ user.username }} ?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline btn-sm">🔑 Reset MDP</button>
+              </form>
+              {% if user.id != current_user.id %}
+              <form method="post" action="{{ url_for('admin.user_delete', id=user.id) }}"
+                    onsubmit="return confirm('Supprimer définitivement {{ user.username }} ?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">👥</div>
+    <p>Aucun utilisateur trouvé.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
