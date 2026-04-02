@@ -110,9 +110,9 @@
           <tr><th>#</th><th>Étudiant</th><th>Moyenne</th></tr>
         </thead>
         <tbody>
-          {% for i, s in enumerate(stats.top_students, 1) %}
+          {% for s in stats.top_students %}
           <tr>
-            <td style="color:var(--text-muted); font-size:13px;">{{ i }}</td>
+            <td style="color:var(--text-muted); font-size:13px;">{{ loop.index }}</td>
             <td class="td-name">{{ s.username }}</td>
             <td><span class="badge badge-green">{{ "%.1f"|format(s.average) }}/20</span></td>
           </tr>
