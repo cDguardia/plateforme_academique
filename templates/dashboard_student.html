@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord Étudiant{% endblock %}
+{% block page_title %}Mon tableau de bord{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon green">📊</div>
+    <div>
+      <div class="stat-value">
+        {% if stats.average is not none %}
+          {{ "%.1f"|format(stats.average) }}/20
+        {% else %}
+          —
+        {% endif %}
+      </div>
+      <div class="stat-label">Moyenne générale</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue">📚</div>
+    <div>
+      <div class="stat-value">{{ stats.enrolled_courses }}</div>
+      <div class="stat-label">Cours inscrits</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple">📝</div>
+    <div>
+      <div class="stat-value">{{ stats.grades_received }}</div>
+      <div class="stat-label">Notes reçues</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warn">⏳</div>
+    <div>
+      <div class="stat-value">{{ stats.pending_grades }}</div>
+      <div class="stat-label">En attente de note</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:20px;">
+
+  <!-- Mes cours -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📚 Mes cours</div>
+      <a href="{{ url_for('student.courses') }}" class="btn btn-outline btn-sm">Voir tout</a>
+    </div>
+    {% if my_courses %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cours</th>
+            <th>Professeur</th>
+            <th>Crédits</th>
+            <th>Ma note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in my_courses %}
+          <tr>
+            <td>
+              <div class="td-name">{{ item.course.name }}</div>
+              <div style="font-size:11px; color:var(--text-muted);">{{ item.course.code }}</div>
+            </td>
+            <td style="font-size:12px;">{{ item.professor_name }}</td>
+            <td><span class="badge badge-gray">{{ item.course.credits }} cr.</span></td>
+            <td>
+              {% if item.grade is not none %}
+                <span class="badge {% if item.grade >= 10 %}badge-green{% else %}badge-red{% endif %}">
+                  {{ item.grade }}/20
+                </span>
+              {% else %}
+                <span style="color:var(--text-muted); font-size:12px;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📚</div>
+      <p>Vous n'êtes inscrit à aucun cours.</p>
+      <a href="{{ url_for('student.courses') }}" class="btn btn-primary" style="margin-top:12px;">Parcourir les cours</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Dernières notes -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📝 Mes dernières notes</div>
+      <a href="{{ url_for('student.grades') }}" class="btn btn-outline btn-sm">Tout voir</a>
+    </div>
+    {% if recent_grades %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cours</th>
+            <th>Note</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grade in recent_grades %}
+          <tr>
+            <td class="td-name">{{ grade.course_name }}</td>
+            <td>
+              <span class="badge {% if grade.value >= 10 %}badge-green{% else %}badge-red{% endif %}">
+                {{ grade.value }}/20
+              </span>
+            </td>
+            <td style="font-size:12px; color:var(--text-dim);">{{ grade.graded_at.strftime('%d/%m/%Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📝</div>
+      <p>Aucune note disponible pour le moment.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
