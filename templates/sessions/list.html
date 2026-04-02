@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Sessions actives{% endblock %}
+{% block page_title %}Mes sessions actives{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;">
+
+  {% if sessions|length > 1 %}
+  <div style="margin-bottom:16px; text-align:right;">
+    <form method="POST" action="{{ url_for('sessions.revoke_all') }}"
+          onsubmit="return confirm('Révoquer toutes les autres sessions ?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">
+        Révoquer toutes les autres sessions
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🔒 Sessions actives</div>
+    </div>
+    {% if sessions %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Adresse IP</th>
+            <th>Navigateur / Appareil</th>
+            <th>Première connexion</th>
+            <th>Dernière activité</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td class="td-name">
+              {{ s.ip_address or '—' }}
+              {% if s.token_hash == current_hash %}
+              <span class="badge badge-green" style="margin-left:6px;">Session actuelle</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px; color:var(--text-dim); max-width:220px; overflow:hidden;
+                       text-overflow:ellipsis; white-space:nowrap;">
+              {{ s.user_agent or '—' }}
+            </td>
+            <td style="font-size:12px; color:var(--text-dim);">
+              {{ s.created_at.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td style="font-size:12px; color:var(--text-dim);">
+              {{ s.last_seen.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+            <td>
+              {% if s.token_hash != current_hash %}
+              <form method="POST" action="{{ url_for('sessions.revoke', id=s.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger">Révoquer</button>
+              </form>
+              {% else %}
+              <span style="font-size:12px; color:var(--text-dim);">Session courante</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">🔒</div>
+      <p>Aucune session active enregistrée.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="margin-top:12px;">
+    <a href="{{ url_for('dashboard') }}" style="color:var(--text-dim); font-size:13px;">
+      ← Retour au tableau de bord
+    </a>
+  </div>
+</div>
+{% endblock %}
