@@ -22,6 +22,11 @@
 
     <nav class="sidebar-nav">
 
+      {% set unread_msgs = 0 %}
+      {% if current_user.is_authenticated %}
+        {% set unread_msgs = current_user.id %}
+      {% endif %}
+
       {% if current_user.role == 'admin' %}
       <div class="sidebar-section">Navigation</div>
       <a href="{{ url_for('admin.dashboard') }}"
@@ -40,6 +45,14 @@
          class="nav-link {% if request.endpoint == 'admin.statistics' %}active{% endif %}">
         <span class="icon">📈</span> Statistiques
       </a>
+      <a href="{{ url_for('schedule.view') }}"
+         class="nav-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+        <span class="icon">📅</span> Emploi du temps
+      </a>
+      <a href="{{ url_for('messages.inbox') }}"
+         class="nav-link {% if 'messages' in request.endpoint %}active{% endif %}">
+        <span class="icon">✉️</span> Messagerie
+      </a>
       <a href="{{ url_for('admin.settings') }}"
          class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}">
         <span class="icon">⚙️</span> Paramètres
@@ -54,6 +67,18 @@
       <a href="{{ url_for('professor.courses') }}"
          class="nav-link {% if 'professor.course' in request.endpoint %}active{% endif %}">
         <span class="icon">📚</span> Mes cours
+      </a>
+      <a href="{{ url_for('schedule.view') }}"
+         class="nav-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+        <span class="icon">📅</span> Emploi du temps
+      </a>
+      <a href="{{ url_for('messages.inbox') }}"
+         class="nav-link {% if 'messages' in request.endpoint %}active{% endif %}">
+        <span class="icon">✉️</span> Messagerie
+      </a>
+      <a href="{{ url_for('sessions.list_sessions') }}"
+         class="nav-link {% if 'sessions' in request.endpoint %}active{% endif %}">
+        <span class="icon">🔒</span> Mes sessions
       </a>
       <a href="{{ url_for('professor.profile') }}"
          class="nav-link {% if request.endpoint == 'professor.profile' %}active{% endif %}">
@@ -74,11 +99,40 @@
          class="nav-link {% if request.endpoint == 'student.grades' %}active{% endif %}">
         <span class="icon">📝</span> Mes notes
       </a>
+      <a href="{{ url_for('schedule.view') }}"
+         class="nav-link {% if 'schedule' in request.endpoint %}active{% endif %}">
+        <span class="icon">📅</span> Emploi du temps
+      </a>
+      <a href="{{ url_for('messages.inbox') }}"
+         class="nav-link {% if 'messages' in request.endpoint %}active{% endif %}">
+        <span class="icon">✉️</span> Messagerie
+      </a>
+      <a href="{{ url_for('sessions.list_sessions') }}"
+         class="nav-link {% if 'sessions' in request.endpoint %}active{% endif %}">
+        <span class="icon">🔒</span> Mes sessions
+      </a>
       <a href="{{ url_for('student.profile') }}"
          class="nav-link {% if request.endpoint == 'student.profile' %}active{% endif %}">
         <span class="icon">👤</span> Mon profil
       </a>
       {% endif %}
+
+      <!-- Lien 2FA commun (tous rôles) -->
+      <div class="sidebar-section">Sécurité</div>
+      {% if not current_user.totp_enabled %}
+      <a href="{{ url_for('auth.two_fa_setup') }}"
+         class="nav-link {% if '2fa' in request.endpoint %}active{% endif %}">
+        <span class="icon">🔐</span> Activer 2FA
+      </a>
+      {% else %}
+      <span class="nav-link" style="cursor:default; opacity:0.6;">
+        <span class="icon">✅</span> 2FA actif
+      </span>
+      {% endif %}
+      <a href="{{ url_for('auth.change_password') }}"
+         class="nav-link {% if request.endpoint == 'auth.change_password' %}active{% endif %}">
+        <span class="icon">🔑</span> Mot de passe
+      </a>
 
     </nav>
 

@@ -8,7 +8,7 @@ from flask import Flask, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
 from config import CONFIG_MAP
-from app.extensions import bcrypt, csrf, db, login_manager
+from app.extensions import bcrypt, csrf, db, limiter, login_manager
 
 
 def create_app(env: str | None = None) -> Flask:
@@ -27,6 +27,7 @@ def create_app(env: str | None = None) -> Flask:
     login_manager.init_app(app)
     csrf.init_app(app)
     bcrypt.init_app(app)
+    limiter.init_app(app)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Veuillez vous connecter pour accéder à cette page."
@@ -58,13 +59,19 @@ def create_app(env: str | None = None) -> Flask:
     # ── Blueprints ───────────────────────────────────────────────────────────
     from app.auth import auth_bp
     from app.routes_admin import admin_bp
+    from app.routes_messages import messages_bp
     from app.routes_professor import professor_bp
+    from app.routes_schedule import schedule_bp
+    from app.routes_sessions import sessions_bp
     from app.routes_student import student_bp
 
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(professor_bp, url_prefix="/professor")
     app.register_blueprint(student_bp, url_prefix="/student")
+    app.register_blueprint(messages_bp)
+    app.register_blueprint(schedule_bp)
+    app.register_blueprint(sessions_bp)
 
     # ── Routes globales ──────────────────────────────────────────────────────
     @app.route("/")
