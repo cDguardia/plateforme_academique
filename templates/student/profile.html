@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Mon profil{% endblock %}
+{% block page_title %}Mon profil{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;">
+
+  <!-- Avatar + infos -->
+  <div class="card mb-24">
+    <div class="card-body" style="display:flex; align-items:center; gap:20px;">
+      <div style="width:64px; height:64px; border-radius:50%;
+                  background:linear-gradient(135deg, var(--green), var(--accent));
+                  display:flex; align-items:center; justify-content:center;
+                  font-size:26px; font-weight:700; color:#000; flex-shrink:0;">
+        {{ current_user.username[0].upper() }}
+      </div>
+      <div>
+        <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:4px;">
+          {{ current_user.username }}
+        </div>
+        <div style="font-size:13px; color:var(--text-dim); margin-bottom:8px;">
+          {{ current_user.email }}
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <span class="badge badge-green">🎓 Étudiant</span>
+          {% if student.student_number %}
+          <span class="badge badge-gray" style="font-family:monospace;">
+            N° {{ student.student_number }}
+          </span>
+          {% endif %}
+          {% if student.class_name %}
+          <span class="badge badge-blue">{{ student.class_name }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modifier le profil -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">✏️ Modifier le profil</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('student.profile_edit') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username"
+                   value="{{ form.username.data or current_user.username }}"
+                   required>
+            {% if form.username.errors %}
+              {% for e in form.username.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email"
+                   value="{{ form.email.data or current_user.email }}"
+                   required>
+            {% if form.email.errors %}
+              {% for e in form.email.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary">💾 Mettre à jour</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Récapitulatif académique -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">📊 Récapitulatif académique</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="padding:14px; background:var(--surface2); border:1px solid var(--border);
+                    border-radius:8px; text-align:center;">
+          <div style="font-size:22px; font-weight:700;
+                      color:{% if academic.average and academic.average >= 10 %}var(--green){% else %}var(--text){% endif %};">
+            {{ "%.1f"|format(academic.average) if academic.average else '—' }}/20
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Moyenne générale</div>
+        </div>
+        <div style="padding:14px; background:var(--surface2); border:1px solid var(--border);
+                    border-radius:8px; text-align:center;">
+          <div style="font-size:22px; font-weight:700; color:var(--text);">
+            {{ academic.validated_credits }}/{{ academic.total_credits }}
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Crédits validés</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sécurité -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🔒 Sécurité</div>
+    </div>
+    <div class="card-body">
+      <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline">
+        🔑 Changer mon mot de passe
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
