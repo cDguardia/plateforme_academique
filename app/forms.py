@@ -4,7 +4,7 @@ import re
 
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, IntegerField, PasswordField, SelectField, StringField, TextAreaField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, Regexp, ValidationError
 
 from app.models import User
 
@@ -140,3 +140,48 @@ class ProfileProfessorForm(FlaskForm):
 class ProfileStudentForm(FlaskForm):
     username = StringField("Nom d'utilisateur", validators=[DataRequired(), Length(min=3, max=80)])
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=120)])
+
+
+# ─── 2FA FORM ────────────────────────────────────────────────────────────────
+
+class TotpForm(FlaskForm):
+    code = StringField(
+        "Code à 6 chiffres",
+        validators=[
+            DataRequired("Ce champ est requis."),
+            Regexp(r"^\d{6}$", message="Le code doit contenir exactement 6 chiffres."),
+        ],
+    )
+
+
+# ─── MESSAGE FORMS ───────────────────────────────────────────────────────────
+
+class MessageForm(FlaskForm):
+    receiver_id = SelectField("Destinataire", coerce=int, validators=[DataRequired()])
+    subject = StringField("Sujet", validators=[DataRequired(), Length(max=200)])
+    body = TextAreaField(
+        "Message",
+        validators=[DataRequired(), Length(min=1, max=2000)],
+    )
+
+
+# ─── SCHEDULE FORMS ──────────────────────────────────────────────────────────
+
+class ScheduleForm(FlaskForm):
+    course_id = SelectField("Cours", coerce=int, validators=[DataRequired()])
+    day_of_week = SelectField(
+        "Jour",
+        choices=[(0, "Lundi"), (1, "Mardi"), (2, "Mercredi"),
+                 (3, "Jeudi"), (4, "Vendredi"), (5, "Samedi")],
+        coerce=int,
+        validators=[DataRequired()],
+    )
+    start_time = StringField(
+        "Heure début (HH:MM)",
+        validators=[DataRequired(), Regexp(r"^\d{2}:\d{2}$", message="Format HH:MM requis.")],
+    )
+    end_time = StringField(
+        "Heure fin (HH:MM)",
+        validators=[DataRequired(), Regexp(r"^\d{2}:\d{2}$", message="Format HH:MM requis.")],
+    )
+    room = StringField("Salle", validators=[Optional(), Length(max=50)])
