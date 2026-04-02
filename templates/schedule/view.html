@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Emploi du temps{% endblock %}
+{% block page_title %}Emploi du temps{% endblock %}
+
+{% block content %}
+
+{% if current_user.role == 'admin' %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('schedule.create') }}" class="btn btn-primary">+ Ajouter un créneau</a>
+</div>
+{% endif %}
+
+{% set colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'] %}
+
+{% set has_any = namespace(v=false) %}
+{% for day_idx, slots in by_day.items() %}
+  {% if slots %}{% set has_any.v = true %}{% endif %}
+{% endfor %}
+
+{% if not has_any.v %}
+<div class="empty-state">
+  <div class="icon">📅</div>
+  <p>Aucun créneau planifié pour le moment.</p>
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('schedule.create') }}" class="btn btn-primary" style="margin-top:12px;">
+    Ajouter le premier créneau
+  </a>
+  {% endif %}
+</div>
+{% else %}
+
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px;">
+  {% for day_idx in range(6) %}
+  {% set slots = by_day[day_idx] %}
+  {% if slots %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ day_names[day_idx] }}</div>
+    </div>
+    <div style="padding:12px 16px; display:flex; flex-direction:column; gap:10px;">
+      {% for slot in slots %}
+      {% set color = colors[loop.index0 % colors|length] %}
+      <div style="border-left:3px solid {{ color }}; padding:8px 12px;
+                  background:var(--surface2); border-radius:0 8px 8px 0;">
+        <div style="font-size:13px; font-weight:600; color:var(--text);">
+          {{ slot.course.name }}
+        </div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:3px;">
+          {{ slot.start_time }} – {{ slot.end_time }}
+          {% if slot.room %} · Salle {{ slot.room }}{% endif %}
+        </div>
+        <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">
+          <span class="badge badge-blue">{{ slot.course.class_name }}</span>
+        </div>
+        {% if current_user.role == 'admin' %}
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <a href="{{ url_for('schedule.edit', id=slot.id) }}"
+             class="btn btn-sm btn-secondary">Modifier</a>
+          <form method="POST" action="{{ url_for('schedule.delete', id=slot.id) }}"
+                onsubmit="return confirm('Supprimer ce créneau ?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
