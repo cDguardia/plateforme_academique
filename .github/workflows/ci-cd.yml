@@ -2,9 +2,9 @@ name: CI/CD — Plateforme Académique Sécurisée
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, clement ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 permissions:
   contents: read
@@ -194,8 +194,7 @@ jobs:
           pytest tests/ \
             --tb=short \
             --junit-xml=pytest-report.xml \
-            -v \
-            || true
+            -v
 
       - name: Upload pytest report
         uses: actions/upload-artifact@v4

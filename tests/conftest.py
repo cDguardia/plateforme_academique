@@ -16,9 +16,9 @@ def app():
         _db.drop_all()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def client(app):
-    """Client de test Flask."""
+    """Client de test Flask — nouveau client par test (isolation des cookies/sessions)."""
     return app.test_client()
 
 

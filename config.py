@@ -46,6 +46,7 @@ class ProductionConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     TESTING = True
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False  # Désactive Flask-Limiter en mode test
     # SQLite en mémoire en local ; remplacé par DATABASE_URL en CI
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
