@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Messagerie{% endblock %}
+{% block page_title %}Messagerie — Boîte de réception{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:12px; margin-bottom:20px; align-items:center;">
+  <a href="{{ url_for('messages.compose') }}" class="btn btn-primary">+ Nouveau message</a>
+  <a href="{{ url_for('messages.sent') }}" class="btn btn-secondary">Messages envoyés</a>
+  {% if unread > 0 %}
+  <span class="badge badge-red">{{ unread }} non lu{{ 's' if unread > 1 }}</span>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">📥 Boîte de réception</div>
+  </div>
+  {% if msgs.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>De</th>
+          <th>Sujet</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for msg in msgs.items %}
+        <tr style="{% if not msg.is_read %}font-weight:600;{% endif %}">
+          <td style="width:8px; padding-right:0;">
+            {% if not msg.is_read %}
+            <span style="display:inline-block; width:8px; height:8px;
+                         border-radius:50%; background:var(--accent);"></span>
+            {% endif %}
+          </td>
+          <td class="td-name">{{ msg.sender.username }}</td>
+          <td>
+            <a href="{{ url_for('messages.read', id=msg.id) }}"
+               style="color:var(--text); text-decoration:none;">
+              {{ msg.subject }}
+            </a>
+          </td>
+          <td style="color:var(--text-dim); font-size:12px;">
+            {{ msg.created_at.strftime('%d/%m/%Y %H:%M') }}
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('messages.delete', id=msg.id) }}"
+                  onsubmit="return confirm('Supprimer ce message ?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if msgs.pages > 1 %}
+  <div style="padding:12px 16px; display:flex; gap:8px;">
+    {% if msgs.has_prev %}
+    <a href="{{ url_for('messages.inbox', page=msgs.prev_num) }}" class="btn btn-sm btn-secondary">← Précédent</a>
+    {% endif %}
+    <span style="font-size:13px; color:var(--text-dim); padding:6px 0;">
+      Page {{ msgs.page }}/{{ msgs.pages }}
+    </span>
+    {% if msgs.has_next %}
+    <a href="{{ url_for('messages.inbox', page=msgs.next_num) }}" class="btn btn-sm btn-secondary">Suivant →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📥</div>
+    <p>Aucun message reçu.</p>
+    <a href="{{ url_for('messages.compose') }}" class="btn btn-primary" style="margin-top:12px;">
+      Envoyer un message
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

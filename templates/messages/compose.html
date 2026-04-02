@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Nouveau message{% endblock %}
+{% block page_title %}Nouveau message{% endblock %}
+
+{% block content %}
+<div style="max-width:620px;">
+  <div style="margin-bottom:16px;">
+    <a href="{{ url_for('messages.inbox') }}" style="color:var(--text-dim); font-size:13px;">
+      ← Boîte de réception
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">✉️ Composer un message</div>
+    </div>
+    <div class="card-body">
+      {% if not contacts %}
+      <div class="empty-state">
+        <div class="icon">👥</div>
+        <p>Aucun contact disponible. Vous devez être inscrit à au moins un cours pour contacter votre professeur.</p>
+      </div>
+      {% else %}
+      <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div style="margin-bottom:16px;">
+          {{ form.receiver_id.label(style="display:block; font-size:12px; font-weight:600;
+             color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;") }}
+          {{ form.receiver_id(style="width:100%; padding:10px 12px; border-radius:8px;
+             border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:14px;") }}
+        </div>
+
+        <div style="margin-bottom:16px;">
+          {{ form.subject.label(style="display:block; font-size:12px; font-weight:600;
+             color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;") }}
+          {{ form.subject(style="width:100%; padding:10px 12px; border-radius:8px;
+             border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:14px;") }}
+          {% for e in form.subject.errors %}
+          <div style="color:var(--red, #f87171); font-size:12px; margin-top:4px;">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div style="margin-bottom:20px;">
+          {{ form.body.label(style="display:block; font-size:12px; font-weight:600;
+             color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;") }}
+          {{ form.body(style="width:100%; padding:10px 12px; border-radius:8px;
+             border:1px solid var(--border); background:var(--surface2); color:var(--text);
+             font-size:14px; min-height:160px; resize:vertical;",
+             maxlength="2000", placeholder="Votre message (max 2000 caractères)...") }}
+          {% for e in form.body.errors %}
+          <div style="color:var(--red, #f87171); font-size:12px; margin-top:4px;">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Envoyer</button>
+        <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary" style="margin-left:8px;">
+          Annuler
+        </a>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
