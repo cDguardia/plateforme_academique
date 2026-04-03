@@ -8,6 +8,7 @@ permissions:
   contents: read
   packages: write
   security-events: write
+  issues: write
 
 env:
   PYTHON_VERSION: "3.11"
@@ -214,13 +215,15 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Start application
+      - name: Initialize database and start application
         env:
           FLASK_ENV: testing
           DATABASE_URL: mysql+pymysql://academique:academique@127.0.0.1:3306/academique_test
           SECRET_KEY: zap-test-secret-key-minimum-32-chars-long
           FERNET_KEY: I5zvDebYSGLzHt-oWiBOL21govf9UQQa4huvQ8iMs78=
         run: |
+          flask init-db
+          flask seed-db
           python run.py &
           echo $! > app.pid
           echo "Waiting for app to be ready..."
