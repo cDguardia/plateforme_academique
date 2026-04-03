@@ -50,40 +50,60 @@ jobs:
             --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s'
 
   # ─────────────────────────────────────────────────────────────
-  # ÉTAPE 2 — SAST (SonarLint/SonarCloud)
+  # ÉTAPE 2 — SAST (Bandit)
   # ─────────────────────────────────────────────────────────────
   sast:
-    name: "2 · SAST — SonarCloud"
+    name: "2 · SAST — Bandit"
     runs-on: ubuntu-latest
     needs: lint
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install Bandit
+        run: pip install bandit[toml]
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Run Bandit SAST
+        run: |
+          bandit -r app/ run.py config.py \
+            -f json \
+            -o bandit-report.json \
+            -ll \
+            --exclude './.git,./tests' \
+            || true
+
+      - name: Display Bandit summary
+        run: |
+          python3 -c "
+          import json, sys
+          with open('bandit-report.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          high = [r for r in results if r['issue_severity'] == 'HIGH']
+          med  = [r for r in results if r['issue_severity'] == 'MEDIUM']
+          print(f'HIGH severity issues: {len(high)}')
+          print(f'MEDIUM severity issues: {len(med)}')
+          if high:
+              print('FAILED: High severity security issues found')
+              for r in high:
+                  print(f'  {r[\"filename\"]}:{r[\"line_number\"]} — {r[\"issue_text\"]}')
+              sys.exit(1)
+          print('OK: No high severity issues')
+          "
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          args: >
-            -Dsonar.organization=${{ github.repository_owner }}
-            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
-            -Dsonar.python.version=${{ env.PYTHON_VERSION }}
-            -Dsonar.sources=app,run.py,config.py
-            -Dsonar.tests=tests
-            -Dsonar.exclusions=**/migrations/**,**/*.pyc,**/__pycache__/**
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
 
   # ─────────────────────────────────────────────────────────────
   # ÉTAPE 3 — Analyse des dépendances (pip-audit + safety)
