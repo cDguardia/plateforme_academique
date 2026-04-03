@@ -223,8 +223,14 @@ jobs:
           SECRET_KEY: zap-test-secret-key-minimum-32-chars-long
           FERNET_KEY: I5zvDebYSGLzHt-oWiBOL21govf9UQQa4huvQ8iMs78=
         run: |
-          flask init-db
-          flask seed-db
+          python -c "
+          from app import create_app
+          from app.extensions import db
+          app = create_app('testing')
+          with app.app_context():
+              db.create_all()
+              print('DB initialized')
+          "
           python run.py &
           echo $! > app.pid
           echo "Waiting for app to be ready..."
