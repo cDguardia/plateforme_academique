@@ -1,53 +1,246 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription - Plateforme Académique Sécurisée</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
 
-{% block title %}Inscription{% endblock %}
+    :root {
+      --bg: #080c14;
+      --surface: #0d1420;
+      --border: #1e2d45;
+      --accent: #00c4ff;
+      --text: #e2eaf5;
+      --text-dim: #6b8299;
+    }
 
-{% block extra_head %}
-<style>
-  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
-  .auth-wrap { width: 100%; max-width: 480px; }
-  .auth-logo { text-align: center; margin-bottom: 28px; }
-  .auth-logo .icon {
-    width: 52px; height: 52px;
-    background: linear-gradient(135deg, #00c4ff, #7b5cfa);
-    border-radius: 12px;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 24px; margin-bottom: 10px;
-  }
-  .auth-logo h1 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .auth-logo p { font-size: 13px; color: var(--text-dim); }
-  .auth-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 28px;
-  }
-  .auth-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
-  .auth-card .subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
-  .btn-submit {
-    width: 100%; padding: 11px;
-    background: linear-gradient(135deg, #00c4ff, #7b5cfa);
-    border: none; border-radius: 6px;
-    color: #fff; font-size: 14px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.15s;
-  }
-  .btn-submit:hover { opacity: 0.9; }
-  .role-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-  .role-option input { display: none; }
-  .role-option label {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 12px 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    transition: all 0.15s;
-    text-align: center;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 20px;
+    }
+
+    .register-card {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .logo-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 196, 255, 0.2);
+    }
+
+    .role-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .role-option {
+      position: relative;
+    }
+
+    .role-option input {
+      display: none;
+    }
+
+    .role-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .role-option input:checked + label {
+      background: rgba(0, 196, 255, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .role-option label:hover {
+      border-color: rgba(0, 196, 255, 0.5);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background-color: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 15px rgba(0, 196, 255, 0.4);
+    }
+
+    .error-message {
+      color: #ff6b6b;
+      font-size: 12px;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: rgba(255, 107, 107, 0.1);
+      border-radius: 6px;
+      border-left: 3px solid #ff6b6b;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .login-link a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="register-card">
+    <div class="logo-container">
+      <div class="logo-title">Plateforme Académique</div>
+      <div class="logo-subtitle">Créer un nouveau compte</div>
+    </div>
+
+    {% if form.errors %}
+      {% for field, errors in form.errors.items() %}
+        <div class="error-message">
+          {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      {{ form.csrf_token() }}
+
+      <div class="form-group">
+        <label class="form-label">Type de compte</label>
+        <div class="role-options">
+          {% for role in ['student', 'professor', 'admin'] %}
+          <div class="role-option">
+            <input type="radio" name="role" id="role_{{ role }}" value="{{ role }}" 
+              {% if form.role.data == role %}checked{% endif %} required>
+            <label for="role_{{ role }}">
+              {% if role == 'student' %}👨‍🎓 Élève
+              {% elif role == 'professor' %}👨‍🏫 Professeur
+              {% else %}🔐 Admin
+              {% endif %}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nom d'utilisateur</label>
+        {{ form.username(class="form-input", placeholder="votre.nom") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        {{ form.email(class="form-input", placeholder="email@exemple.com") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        {{ form.password(class="form-input", placeholder="••••••••") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirmer le mot de passe</label>
+        {{ form.password_confirm(class="form-input", placeholder="••••••••") }}
+      </div>
+
+      <button type="submit" class="btn-submit">S'inscrire</button>
+
+      <div class="login-link">
+        Déjà inscrit ? <a href="{{ url_for('auth.login') }}">Se connecter</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>
   }
   .role-option label .emoji { font-size: 20px; }
   .role-option input:checked + label {
