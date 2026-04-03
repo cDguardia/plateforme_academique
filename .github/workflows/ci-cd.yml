@@ -44,10 +44,10 @@ jobs:
         run: |
           flake8 app/ run.py config.py \
             --max-line-length=120 \
-            --extend-ignore=E203,W503,F401,E501 \
+            --extend-ignore=E203,W503 \
             --count \
             --statistics \
-            --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s' || echo "Flake8 check completed with warnings"
+            --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s'
 
   # ─────────────────────────────────────────────────────────────
   # ÉTAPE 2 — SAST (SonarLint/SonarCloud)
