@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ msg.subject }}{% endblock %}
+{% block page_title %}Message{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+  <div style="margin-bottom:16px;">
+    <a href="{{ url_for('messages.inbox') }}" style="color:var(--text-dim); font-size:13px;">
+      ← Boîte de réception
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="display:block;">
+      <div class="card-title" style="margin-bottom:8px;">{{ msg.subject }}</div>
+      <div style="display:flex; gap:20px; font-size:12px; color:var(--text-dim);">
+        <span>
+          <strong>De :</strong> {{ msg.sender.username }}
+        </span>
+        <span>
+          <strong>À :</strong> {{ msg.receiver.username }}
+        </span>
+        <span>
+          <strong>Date :</strong> {{ msg.created_at.strftime('%d/%m/%Y à %H:%M') }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="line-height:1.7; white-space:pre-wrap; color:var(--text);">{{ msg.body }}</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:16px;">
+    {% if msg.receiver_id == current_user.id %}
+    <a href="{{ url_for('messages.compose', reply_to=msg.id) }}" class="btn btn-primary">
+      ↩ Répondre
+    </a>
+    {% endif %}
+    <form method="POST" action="{{ url_for('messages.delete', id=msg.id) }}"
+          onsubmit="return confirm('Supprimer ce message ?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">Supprimer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

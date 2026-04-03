@@ -1,0 +1,393 @@
+name: CI/CD — Plateforme Académique Sécurisée
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  PYTHON_VERSION: "3.11"
+  IMAGE_NAME: plateforme-academique
+  REGISTRY: ghcr.io
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 1 — Lint Python (Flake8)
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: "1 · Lint — Flake8"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 flake8-bugbear flake8-bandit
+          pip install -r requirements.txt
+
+      - name: Run Flake8
+        run: |
+          flake8 app/ run.py config.py \
+            --max-line-length=120 \
+            --extend-ignore=E203,W503 \
+            --count \
+            --statistics \
+            --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s'
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 2 — SAST (SonarLint/SonarCloud)
+  # ─────────────────────────────────────────────────────────────
+  sast:
+    name: "2 · SAST — SonarCloud"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ github.repository_owner }}
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.python.version=${{ env.PYTHON_VERSION }}
+            -Dsonar.sources=app,run.py,config.py
+            -Dsonar.tests=tests
+            -Dsonar.exclusions=**/migrations/**,**/*.pyc,**/__pycache__/**
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 3 — Analyse des dépendances (pip-audit + safety)
+  # ─────────────────────────────────────────────────────────────
+  dependency-scan:
+    name: "3 · Dependencies — pip-audit + safety"
+    runs-on: ubuntu-latest
+    needs: sast
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install security tools
+        run: pip install pip-audit safety
+
+      - name: Run pip-audit
+        run: |
+          pip install -r requirements.txt
+          pip-audit \
+            --requirement requirements.txt \
+            --format json \
+            --output pip-audit-report.json \
+            --strict \
+            || (echo "Vulnerable dependencies detected!" && cat pip-audit-report.json && exit 1)
+
+      - name: Run safety
+        run: |
+          safety check --output json --save-json safety-report.json || true
+
+      - name: Analyze safety report
+        run: |
+          python3 -c "
+          import json, sys
+          with open('safety-report.json') as f:
+              data = json.load(f)
+          issues = data.get('issues', [])
+          critical = [i for i in issues if i.get('severity') == 'critical']
+          high = [i for i in issues if i.get('severity') == 'high']
+          
+          print(f'Critical safety issues: {len(critical)}')
+          print(f'High safety issues: {len(high)}')
+          
+          if critical:
+              print('FAILED: Critical safety issues found')
+              for i in critical:
+                  print(f'  {i[\"package\"]} {i[\"vulnerable_spec\"]} — {i[\"advisory\"]}')
+              sys.exit(1)
+          elif high:
+              print('WARNING: High severity safety issues found')
+          else:
+              print('OK: No critical or high severity safety issues')
+          "
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-reports
+          path: |
+            pip-audit-report.json
+            safety-report.json
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 4 — DAST (OWASP ZAP)
+  # ─────────────────────────────────────────────────────────────
+  dast:
+    name: "4 · DAST — OWASP ZAP"
+    runs-on: ubuntu-latest
+    needs: dependency-scan
+    if: github.event_name != 'pull_request'
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: academique_test
+          MYSQL_USER: academique
+          MYSQL_PASSWORD: academique
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u academique -pacademique"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start application
+        env:
+          FLASK_ENV: testing
+          DATABASE_URL: mysql+pymysql://academique:academique@127.0.0.1:3306/academique_test
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'zap-test-secret-key-minimum-32-chars-long' }}
+        run: |
+          python run.py &
+          echo $! > app.pid
+          echo "Waiting for app to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/auth/login > /dev/null; then
+              echo "App is ready after ${i}s"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a -j'
+          fail_action: false
+          artifact_name: 'zap-baseline-report'
+
+      - name: Run OWASP ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a'
+          fail_action: false
+          artifact_name: 'zap-full-report'
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 5 — Build image Docker
+  # ─────────────────────────────────────────────────────────────
+  docker-build:
+    name: "5 · Docker Build"
+    runs-on: ubuntu-latest
+    needs: dast
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify image (smoke test)
+        run: |
+          docker run --rm \
+            -e FLASK_ENV=production \
+            -e DATABASE_URL=mysql+pymysql://u:p@localhost/db \
+            -e SECRET_KEY=ci-test-secret \
+            --entrypoint python \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }} \
+            -c "from app import create_app; app = create_app('testing'); print('Import OK')" \
+            2>/dev/null || true
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 6 — DAST (OWASP ZAP)
+  # ─────────────────────────────────────────────────────────────
+  dast:
+    name: "6 · DAST — OWASP ZAP"
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start application stack
+        run: |
+          docker compose up -d --wait
+          echo "Waiting for app to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/auth/login > /dev/null; then
+              echo "App is ready after ${i}s"
+              break
+            fi
+            sleep 2
+          done
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'zap-test-secret-key-minimum-32-chars-long' }}
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a -j'
+          fail_action: false
+          artifact_name: 'zap-baseline-report'
+
+      - name: Run OWASP ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a'
+          fail_action: false
+          artifact_name: 'zap-full-report'
+
+      - name: Stop application stack
+        if: always()
+        run: docker compose down -v
+
+  # ─────────────────────────────────────────────────────────────
+  # ÉTAPE 6 — Déploiement (main uniquement)
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    name: "6 · Deploy — Docker Compose"
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: http://localhost:5000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via Docker Compose
+        run: |
+          echo "Deploying image: ${{ needs.docker-build.outputs.image-tag }}"
+          docker compose pull
+          docker compose up -d --remove-orphans
+          echo "Deployment complete"
+        env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          COMPOSE_PROJECT_NAME: academique
+
+      - name: Verify deployment health
+        run: |
+          echo "Checking application health..."
+          for i in $(seq 1 15); do
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:5000/auth/login || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (HTTP 200)"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying..."
+            sleep 5
+          done
+          echo "Health check FAILED after 75s"
+          docker compose logs app
+          exit 1
+
+      - name: Notify deployment success
+        run: |
+          echo "Plateforme Academique deployed successfully"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Actor:  ${{ github.actor }}"

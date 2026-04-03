@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{% if entry %}Modifier le créneau{% else %}Nouveau créneau{% endif %}{% endblock %}
+{% block page_title %}{% if entry %}Modifier le créneau{% else %}Ajouter un créneau{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;">
+  <div style="margin-bottom:16px;">
+    <a href="{{ url_for('schedule.view') }}" style="color:var(--text-dim); font-size:13px;">
+      ← Emploi du temps
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📅 {% if entry %}Modifier{% else %}Nouveau{% endif %} créneau</div>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        {{ form.hidden_tag() }}
+
+        {% for field in [form.course_id, form.day_of_week, form.start_time, form.end_time, form.room] %}
+        <div style="margin-bottom:16px;">
+          {{ field.label(style="display:block; font-size:12px; font-weight:600;
+             color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;") }}
+          {{ field(style="width:100%; padding:10px 12px; border-radius:8px;
+             border:1px solid var(--border); background:var(--surface2);
+             color:var(--text); font-size:14px;") }}
+          {% for e in field.errors %}
+          <div style="color:var(--red, #f87171); font-size:12px; margin-top:4px;">{{ e }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">
+            {% if entry %}Enregistrer{% else %}Créer{% endif %}
+          </button>
+          <a href="{{ url_for('schedule.view') }}" class="btn btn-secondary">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }}{% endblock %}
+{% block page_title %}{{ course.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="{{ url_for('student.courses') }}">Mes cours</a>
+  <span>›</span>
+  <span>{{ course.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Infos cours -->
+<div class="card mb-24">
+  <div class="card-body">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+          <span style="font-family:monospace; font-size:12px; color:var(--text-muted);">{{ course.code }}</span>
+          <span class="badge badge-blue">{{ course.class_name }}</span>
+          <span class="badge badge-gray">{{ course.credits }} crédits</span>
+        </div>
+        <div style="font-size:13px; color:var(--text-dim);">
+          👨‍🏫 Professeur : <strong style="color:var(--text);">{{ professor_name }}</strong>
+        </div>
+        {% if course.description %}
+        <p style="font-size:13px; color:var(--text-dim); margin-top:10px; max-width:600px;">
+          {{ course.description }}
+        </p>
+        {% endif %}
+      </div>
+
+      <!-- Ma note -->
+      <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+                  padding:20px 28px; text-align:center; min-width:140px;">
+        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;
+                    letter-spacing:0.08em; margin-bottom:6px;">Ma note</div>
+        {% if my_grade is not none %}
+          <div style="font-size:36px; font-weight:800;
+                      color:{% if my_grade >= 10 %}var(--green){% else %}var(--danger){% endif %};">
+            {{ my_grade }}
+          </div>
+          <div style="font-size:13px; color:var(--text-dim);">/20</div>
+          {% if my_grade >= 10 %}
+            <div style="margin-top:6px;"><span class="badge badge-green">✓ Validé</span></div>
+          {% else %}
+            <div style="margin-top:6px;"><span class="badge badge-red">✕ Non validé</span></div>
+          {% endif %}
+        {% else %}
+          <div style="font-size:28px; color:var(--text-muted);">—</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">En attente</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Statistiques du cours (anonymisées) -->
+<div class="card mb-24">
+  <div class="card-header">
+    <div class="card-title">📊 Statistiques du cours</div>
+  </div>
+  <div class="card-body">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:16px;">
+      <div style="text-align:center; padding:12px; background:var(--surface2);
+                  border:1px solid var(--border); border-radius:8px;">
+        <div style="font-size:22px; font-weight:700; color:var(--text);">{{ class_stats.student_count }}</div>
+        <div style="font-size:11px; color:var(--text-muted);">Étudiants inscrits</div>
+      </div>
+      <div style="text-align:center; padding:12px; background:var(--surface2);
+                  border:1px solid var(--border); border-radius:8px;">
+        <div style="font-size:22px; font-weight:700;
+                    color:{% if class_stats.average and class_stats.average >= 10 %}var(--green){% else %}var(--text){% endif %};">
+          {{ "%.1f"|format(class_stats.average) if class_stats.average else '—' }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">Moyenne de la classe</div>
+      </div>
+      <div style="text-align:center; padding:12px; background:var(--surface2);
+                  border:1px solid var(--border); border-radius:8px;">
+        <div style="font-size:22px; font-weight:700; color:var(--green);">
+          {{ class_stats.highest if class_stats.highest else '—' }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">Note max</div>
+      </div>
+      <div style="text-align:center; padding:12px; background:var(--surface2);
+                  border:1px solid var(--border); border-radius:8px;">
+        <div style="font-size:22px; font-weight:700; color:var(--danger);">
+          {{ class_stats.lowest if class_stats.lowest else '—' }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">Note min</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

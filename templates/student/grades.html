@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Mes notes{% endblock %}
+{% block page_title %}Mes notes{% endblock %}
+
+{% block content %}
+
+<!-- Résumé -->
+<div class="stats-grid mb-24">
+  <div class="stat-card">
+    <div class="stat-icon green">📊</div>
+    <div>
+      <div class="stat-value">
+        {{ "%.1f"|format(summary.average) if summary.average else '—' }}/20
+      </div>
+      <div class="stat-label">Moyenne générale</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue">📚</div>
+    <div>
+      <div class="stat-value">{{ summary.total_courses }}</div>
+      <div class="stat-label">Cours inscrits</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple">📝</div>
+    <div>
+      <div class="stat-value">{{ summary.graded }}</div>
+      <div class="stat-label">Cours notés</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">✅</div>
+    <div>
+      <div class="stat-value">{{ summary.validated }}</div>
+      <div class="stat-label">Cours validés (≥10)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tableau des notes -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">📝 Relevé de notes</div>
+    <a href="{{ url_for('student.grades_export') }}" class="btn btn-outline btn-sm">
+      ⬇ Exporter PDF
+    </a>
+  </div>
+
+  {% if grades %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cours</th>
+          <th>Code</th>
+          <th>Professeur</th>
+          <th>Crédits</th>
+          <th>Note</th>
+          <th>Résultat</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grades %}
+        <tr>
+          <td class="td-name">
+            <a href="{{ url_for('student.course_detail', id=g.course_id) }}"
+               style="color:var(--text);">{{ g.course_name }}</a>
+          </td>
+          <td style="font-family:monospace; font-size:12px; color:var(--text-muted);">
+            {{ g.course_code }}
+          </td>
+          <td style="font-size:13px; color:var(--text-dim);">{{ g.professor_name }}</td>
+          <td><span class="badge badge-gray">{{ g.credits }} cr.</span></td>
+          <td>
+            {% if g.grade is not none %}
+              <span style="font-size:18px; font-weight:700;
+                           color:{% if g.grade >= 10 %}var(--green){% elif g.grade >= 8 %}var(--warn){% else %}var(--danger){% endif %};">
+                {{ g.grade }}
+              </span>
+              <span style="font-size:12px; color:var(--text-muted);">/20</span>
+            {% else %}
+              <span style="color:var(--text-muted); font-size:13px;">En attente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if g.grade is not none %}
+              {% if g.grade >= 10 %}
+                <span class="badge badge-green">✓ Validé</span>
+              {% else %}
+                <span class="badge badge-red">✕ Échec</span>
+              {% endif %}
+            {% else %}
+              <span class="badge badge-gray">⏳ En attente</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px; color:var(--text-dim);">
+            {{ g.graded_at.strftime('%d/%m/%Y') if g.graded_at else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bilan -->
+  {% if summary.average %}
+  <div style="padding:16px 20px; border-top:1px solid var(--border);
+              display:flex; align-items:center; justify-content:flex-end; gap:24px;">
+    <span style="font-size:13px; color:var(--text-dim);">
+      Total crédits validés :
+      <strong style="color:var(--text);">{{ summary.validated_credits }}</strong> /
+      {{ summary.total_credits }}
+    </span>
+    <span style="font-size:15px; font-weight:700;">
+      Moyenne :
+      <span style="color:{% if summary.average >= 10 %}var(--green){% else %}var(--danger){% endif %};">
+        {{ "%.2f"|format(summary.average) }}/20
+      </span>
+    </span>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📝</div>
+    <p>Aucune note disponible pour le moment.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Modifier' if user else 'Créer' }} un utilisateur{% endblock %}
+{% block page_title %}{{ 'Modifier' if user else 'Créer' }} un utilisateur{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="{{ url_for('admin.users') }}">Utilisateurs</a>
+  <span>›</span>
+  <span>{{ 'Modifier' if user else 'Nouveau' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        {{ '✏️ Modifier' if user else '➕ Créer' }} un utilisateur
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="post"
+            action="{{ url_for('admin.user_edit', id=user.id) if user else url_for('admin.user_create') }}"
+            novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username"
+                   value="{{ form.username.data or '' }}"
+                   placeholder="jean.dupont" required>
+            {% if form.username.errors %}
+              {% for e in form.username.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" name="email"
+                   value="{{ form.email.data or '' }}"
+                   placeholder="jean@guardia.school" required>
+            {% if form.email.errors %}
+              {% for e in form.email.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="role">Rôle</label>
+          <select id="role" name="role">
+            <option value="student"   {% if form.role.data == 'student'   %}selected{% endif %}>🎓 Étudiant</option>
+            <option value="professor" {% if form.role.data == 'professor' %}selected{% endif %}>👨‍🏫 Professeur</option>
+            <option value="admin"     {% if form.role.data == 'admin'     %}selected{% endif %}>👑 Administrateur</option>
+          </select>
+          {% if form.role.errors %}
+            {% for e in form.role.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+          {% endif %}
+        </div>
+
+        {% if not user %}
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" name="password"
+                   placeholder="Minimum 8 caractères" required>
+            {% if form.password.errors %}
+              {% for e in form.password.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="password_confirm">Confirmer</label>
+            <input type="password" id="password_confirm" name="password_confirm"
+                   placeholder="••••••••" required>
+            {% if form.password_confirm.errors %}
+              {% for e in form.password_confirm.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; text-transform:none; font-size:13px;">
+            <input type="checkbox" name="is_active" value="1"
+                   {% if form.is_active.data %}checked{% endif %}
+                   style="width:auto;">
+            Compte actif
+          </label>
+        </div>
+
+        <div class="flex-row" style="justify-content:flex-end; gap:10px; margin-top:8px;">
+          <a href="{{ url_for('admin.users') }}" class="btn btn-outline">Annuler</a>
+          <button type="submit" class="btn btn-primary">
+            {{ '💾 Enregistrer' if user else '➕ Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

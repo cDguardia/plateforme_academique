@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Mes cours{% endblock %}
+{% block page_title %}Mes cours{% endblock %}
+
+{% block content %}
+
+<!-- Tabs -->
+<div style="display:flex; gap:4px; margin-bottom:24px;
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:8px; padding:4px; width:fit-content;">
+  <a href="?tab=enrolled"
+     style="padding:8px 18px; border-radius:6px; font-size:13px; font-weight:600;
+            text-decoration:none; transition:all 0.15s;
+            {% if tab == 'enrolled' or not tab %}
+              background:var(--green); color:#000;
+            {% else %}
+              color:var(--text-dim);
+            {% endif %}">
+    📚 Mes cours ({{ enrolled|length }})
+  </a>
+  <a href="?tab=available"
+     style="padding:8px 18px; border-radius:6px; font-size:13px; font-weight:600;
+            text-decoration:none; transition:all 0.15s;
+            {% if tab == 'available' %}
+              background:var(--green); color:#000;
+            {% else %}
+              color:var(--text-dim);
+            {% endif %}">
+    🔍 Cours disponibles ({{ available|length }})
+  </a>
+</div>
+
+{% if tab == 'available' %}
+
+<!-- Cours disponibles -->
+{% if available %}
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px;">
+  {% for course in available %}
+  <div class="card">
+    <div class="card-body">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px;">
+          {{ course.name }}
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <span style="font-family:monospace; font-size:11px; color:var(--text-muted);">{{ course.code }}</span>
+          <span class="badge badge-blue">{{ course.class_name }}</span>
+          <span class="badge badge-gray">{{ course.credits }} cr.</span>
+        </div>
+      </div>
+      <div style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">
+        👨‍🏫 {{ course.professor_name }}
+      </div>
+      <form method="post" action="{{ url_for('student.course_enroll') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="course_id" value="{{ course.id }}">
+        <button type="submit" class="btn btn-primary" style="width:100%;">
+          ➕ S'inscrire à ce cours
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state"><div class="icon">🔍</div><p>Aucun cours disponible pour votre classe.</p></div>
+</div>
+{% endif %}
+
+{% else %}
+
+<!-- Cours inscrits -->
+{% if enrolled %}
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cours</th>
+          <th>Code</th>
+          <th>Professeur</th>
+          <th>Classe</th>
+          <th>Crédits</th>
+          <th>Ma note</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in enrolled %}
+        <tr>
+          <td>
+            <a href="{{ url_for('student.course_detail', id=item.course.id) }}"
+               class="td-name" style="color:var(--text);">
+              {{ item.course.name }}
+            </a>
+          </td>
+          <td style="font-family:monospace; font-size:12px; color:var(--text-muted);">{{ item.course.code }}</td>
+          <td style="font-size:13px;">{{ item.professor_name }}</td>
+          <td><span class="badge badge-blue">{{ item.course.class_name }}</span></td>
+          <td><span class="badge badge-gray">{{ item.course.credits }}</span></td>
+          <td>
+            {% if item.grade is not none %}
+              <span class="badge {% if item.grade >= 10 %}badge-green{% else %}badge-red{% endif %}">
+                {{ item.grade }}/20
+              </span>
+            {% else %}
+              <span style="color:var(--text-muted); font-size:12px;">En attente</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post"
+                  action="{{ url_for('student.course_drop', id=item.course.id) }}"
+                  onsubmit="return confirm('Se désinscrire de {{ item.course.name }} ?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm">Se désinscrire</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="icon">📚</div>
+    <p style="margin-bottom:16px;">Vous n'êtes inscrit à aucun cours.</p>
+    <a href="?tab=available" class="btn btn-primary">Parcourir les cours disponibles</a>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

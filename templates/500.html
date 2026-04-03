@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}500 Erreur serveur{% endblock %}
+{% block page_title %}Erreur serveur{% endblock %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:center; min-height:60vh;">
+  <div style="text-align:center; max-width:400px;">
+    <div style="font-size:64px; margin-bottom:16px;">⚙️</div>
+    <h1 style="font-size:48px; font-weight:800; color:var(--warn); margin-bottom:8px;">500</h1>
+    <h2 style="font-size:18px; font-weight:700; margin-bottom:12px; color:var(--text);">Erreur interne du serveur</h2>
+    <p style="font-size:14px; color:var(--text-dim); margin-bottom:28px; line-height:1.6;">
+      Une erreur inattendue s'est produite. L'équipe technique a été notifiée.
+      Veuillez réessayer dans quelques instants.
+    </p>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <a href="javascript:location.reload()" class="btn btn-outline">↻ Réessayer</a>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Tableau de bord</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,185 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion - ├ëcole de Konoha</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #080c14;
+    --surface: #0d1420;
+    --border: #1e2d45;
+    --accent: #00c4ff;
+    --text: #e2eaf5;
+    --text-dim: #6b8299;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .login-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .logo-container {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .logo-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+
+  .logo-subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 15px;
+  }
+
+  .auth-badges {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 25px;
+  }
+
+  .auth-badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    background-color: rgba(107, 130, 153, 0.1);
+    color: var(--text-dim);
+    border-radius: 4px;
+    border: 1px solid rgba(107, 130, 153, 0.2);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s;
+  }
+
+  .form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 196, 255, 0.2);
+  }
+
+  .form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-bottom: 30px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+  }
+
+  .forgot-link {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .forgot-link:hover {
+    text-decoration: underline;
+  }
+
+  .btn-submit {
+    width: 100%;
+    background-color: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .btn-submit:hover {
+    opacity: 0.9;
+    box-shadow: 0 0 15px rgba(0, 196, 255, 0.4);
+  }
+</style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="logo-container">
+      <div class="logo-title">├ëcole de Konoha</div>
+      <div class="logo-subtitle">Portail de connexion unique</div>
+      <div class="auth-badges">
+        <span class="auth-badge">├ël├¿ves</span>
+        <span class="auth-badge">Parents</span>
+        <span class="auth-badge">Profs</span>
+        <span class="auth-badge">Admin</span>
+      </div>
+    </div>
+
+    <form action="accueil.html">
+      <div class="form-group">
+        <label class="form-label">Identifiant</label>
+        <input type="text" class="form-input" placeholder="Ex: prenom.nom" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" class="form-input" placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó" required>
+      </div>
+
+      <div class="form-options">
+        <label class="checkbox-group">
+          <input type="checkbox"> Se souvenir de moi
+        </label>
+        <a href="#" class="forgot-link">Mot de passe oubli├® ?</a>
+      </div>
+
+      <button type="submit" class="btn-submit">Se connecter</button>
+    </form>
+  </div>
+
+</body>
+</html>

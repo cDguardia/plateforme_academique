@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription - Plateforme Académique Sécurisée</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg: #080c14;
+      --surface: #0d1420;
+      --border: #1e2d45;
+      --accent: #00c4ff;
+      --text: #e2eaf5;
+      --text-dim: #6b8299;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 20px;
+    }
+
+    .register-card {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .logo-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 196, 255, 0.2);
+    }
+
+    .role-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .role-option {
+      position: relative;
+    }
+
+    .role-option input {
+      display: none;
+    }
+
+    .role-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .role-option input:checked + label {
+      background: rgba(0, 196, 255, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .role-option label:hover {
+      border-color: rgba(0, 196, 255, 0.5);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background-color: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 15px rgba(0, 196, 255, 0.4);
+    }
+
+    .error-message {
+      color: #ff6b6b;
+      font-size: 12px;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: rgba(255, 107, 107, 0.1);
+      border-radius: 6px;
+      border-left: 3px solid #ff6b6b;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .login-link a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="register-card">
+    <div class="logo-container">
+      <div class="logo-title">Plateforme Académique</div>
+      <div class="logo-subtitle">Créer un nouveau compte</div>
+    </div>
+
+    {% if form.errors %}
+      {% for field, errors in form.errors.items() %}
+        <div class="error-message">
+          {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      {{ form.csrf_token() }}
+
+      <div class="form-group">
+        <label class="form-label">Type de compte</label>
+        <div class="role-options">
+          {% for role in ['student', 'professor', 'admin'] %}
+          <div class="role-option">
+            <input type="radio" name="role" id="role_{{ role }}" value="{{ role }}" 
+              {% if form.role.data == role %}checked{% endif %} required>
+            <label for="role_{{ role }}">
+              {% if role == 'student' %}👨‍🎓 Élève
+              {% elif role == 'professor' %}👨‍🏫 Professeur
+              {% else %}🔐 Admin
+              {% endif %}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nom d'utilisateur</label>
+        {{ form.username(class="form-input", placeholder="votre.nom") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        {{ form.email(class="form-input", placeholder="email@exemple.com") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        {{ form.password(class="form-input", placeholder="••••••••") }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirmer le mot de passe</label>
+        {{ form.password_confirm(class="form-input", placeholder="••••••••") }}
+      </div>
+
+      <button type="submit" class="btn-submit">S'inscrire</button>
+
+      <div class="login-link">
+        Déjà inscrit ? <a href="{{ url_for('auth.login') }}">Se connecter</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>
+  }
+  .role-option label .emoji { font-size: 20px; }
+  .role-option input:checked + label {
+    border-color: #00c4ff;
+    color: #00c4ff;
+    background: rgba(0,196,255,0.06);
+  }
+  .role-option label:hover { border-color: var(--text-muted); color: var(--text); }
+</style>
+{% endblock %}
+
+{% block public_content %}
+<div class="auth-wrap">
+  <div class="auth-logo">
+    <div class="icon">🎓</div>
+    <h1>Guardia <span style="color:#00c4ff">EDU</span></h1>
+    <p>Créer un compte</p>
+  </div>
+
+  <div class="auth-card">
+    <h2>Inscription</h2>
+    <p class="subtitle">Renseignez vos informations pour créer votre compte.</p>
+
+    {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom:16px;">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('auth.register') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <input type="text" id="username" name="username"
+                 placeholder="jean.dupont"
+                 value="{{ form.username.data or '' }}"
+                 autocomplete="username" required>
+          {% if form.username.errors %}
+            {% for e in form.username.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+          {% endif %}
+        </div>
+        <div class="form-group">
+          <label for="email">Adresse e-mail</label>
+          <input type="email" id="email" name="email"
+                 placeholder="jean@guardia.school"
+                 value="{{ form.email.data or '' }}"
+                 autocomplete="email" required>
+          {% if form.email.errors %}
+            {% for e in form.email.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Rôle</label>
+        <div class="role-options">
+          <div class="role-option">
+            <input type="radio" id="role-student" name="role" value="student"
+                   {% if not form.role.data or form.role.data == 'student' %}checked{% endif %}>
+            <label for="role-student">
+              <span class="emoji">🎓</span>
+              Étudiant
+            </label>
+          </div>
+          <div class="role-option">
+            <input type="radio" id="role-professor" name="role" value="professor"
+                   {% if form.role.data == 'professor' %}checked{% endif %}>
+            <label for="role-professor">
+              <span class="emoji">👨‍🏫</span>
+              Professeur
+            </label>
+          </div>
+          <div class="role-option">
+            <input type="radio" id="role-admin" name="role" value="admin"
+                   {% if form.role.data == 'admin' %}checked{% endif %}>
+            <label for="role-admin">
+              <span class="emoji">👑</span>
+              Admin
+            </label>
+          </div>
+        </div>
+        {% if form.role.errors %}
+          {% for e in form.role.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" name="password"
+               placeholder="Minimum 8 caractères"
+               autocomplete="new-password" required>
+        <div class="form-hint">8 caractères min., incluez majuscule, chiffre et caractère spécial.</div>
+        {% if form.password.errors %}
+          {% for e in form.password.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm">Confirmer le mot de passe</label>
+        <input type="password" id="password_confirm" name="password_confirm"
+               placeholder="••••••••"
+               autocomplete="new-password" required>
+        {% if form.password_confirm.errors %}
+          {% for e in form.password_confirm.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn-submit">Créer mon compte</button>
+    </form>
+
+    <div style="text-align:center; margin-top:20px; font-size:13px; color:var(--text-dim);">
+      Déjà inscrit ?
+      <a href="{{ url_for('auth.login') }}" style="color:#00c4ff;">Se connecter</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

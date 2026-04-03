@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.name }}{% endblock %}
+{% block page_title %}{{ course.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="{{ url_for('professor.courses') }}">Mes cours</a>
+  <span>›</span>
+  <span>{{ course.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Infos cours -->
+<div class="card mb-24">
+  <div class="card-body">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <span style="font-family:monospace; font-size:12px; color:var(--text-muted);">{{ course.code }}</span>
+          <span class="badge badge-blue">{{ course.class_name }}</span>
+          <span class="badge badge-gray">{{ course.credits }} crédits</span>
+        </div>
+        {% if course.description %}
+        <p style="font-size:13px; color:var(--text-dim); max-width:600px;">{{ course.description }}</p>
+        {% endif %}
+      </div>
+      <div style="display:flex; gap:8px;">
+        <a href="{{ url_for('professor.course_edit', id=course.id) }}" class="btn btn-outline">✏️ Modifier</a>
+        <a href="{{ url_for('professor.course_grades', id=course.id) }}" class="btn btn-primary">📝 Gérer les notes</a>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:24px; margin-top:20px; padding-top:20px; border-top:1px solid var(--border);">
+      <div style="text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:var(--text);">{{ stats.student_count }}</div>
+        <div style="font-size:11px; color:var(--text-muted);">Étudiants</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:var(--green);">
+          {{ "%.1f"|format(stats.average) if stats.average else '—' }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">Moyenne /20</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:var(--accent);">
+          {{ stats.grades_given }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">Notes saisies</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:24px; font-weight:700; color:var(--warn);">
+          {{ stats.pending }}
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);">En attente</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des étudiants et leurs notes -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">🎓 Étudiants inscrits</div>
+    <a href="{{ url_for('professor.course_grades', id=course.id) }}" class="btn btn-primary btn-sm">
+      📝 Saisie des notes
+    </a>
+  </div>
+  {% if students %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>N° étudiant</th>
+          <th>Nom</th>
+          <th>Classe</th>
+          <th>Note</th>
+          <th>Date de notation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td style="font-family:monospace; font-size:12px; color:var(--text-muted);">
+            {{ s.student_number }}
+          </td>
+          <td class="td-name">{{ s.username }}</td>
+          <td><span class="badge badge-gray">{{ s.class_name }}</span></td>
+          <td>
+            {% if s.grade is not none %}
+              <span class="badge {% if s.grade >= 10 %}badge-green{% elif s.grade >= 8 %}badge-warn{% else %}badge-red{% endif %}">
+                {{ s.grade }}/20
+              </span>
+            {% else %}
+              <span style="color:var(--text-muted); font-size:12px;">Non noté</span>
+            {% endif %}
+          </td>
+          <td style="font-size:12px; color:var(--text-dim);">
+            {{ s.graded_at.strftime('%d/%m/%Y') if s.graded_at else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🎓</div>
+    <p>Aucun étudiant inscrit à ce cours.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
