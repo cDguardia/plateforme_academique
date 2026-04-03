@@ -139,12 +139,17 @@ def user_delete(id: int):
 @login_required
 @admin_required
 def user_reset_password(id: int):
+    import secrets
+
     user = User.query.get_or_404(id)
-    temp_pwd = f"Reset@{user.id}2026!"
+    temp_pwd = secrets.token_urlsafe(12)
     user.set_password(temp_pwd)
     db.session.commit()
     log_audit("password_reset", resource_type="user", resource_id=user.id)
-    flash(f"Mot de passe de « {user.username} » réinitialisé : {temp_pwd}", "warning")
+    flash(
+        f"Mot de passe de « {user.username} » réinitialisé. Communiquez-le de manière sécurisée.",
+        "warning",
+    )
     return redirect(url_for("admin.users"))
 
 

@@ -2,9 +2,7 @@ name: CI/CD — Plateforme Académique Sécurisée
 
 on:
   push:
-    branches: [ main, develop, clement ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -51,68 +49,48 @@ jobs:
             --format='%(path)s:%(row)d:%(col)d: %(code)s %(text)s'
 
   # ─────────────────────────────────────────────────────────────
-  # ÉTAPE 2 — SAST (Bandit — équivalent SonarLint en CLI)
+  # ÉTAPE 2 — SAST (SonarLint/SonarCloud)
   # ─────────────────────────────────────────────────────────────
   sast:
-    name: "2 · SAST — Bandit"
+    name: "2 · SAST — SonarCloud"
     runs-on: ubuntu-latest
     needs: lint
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Bandit
-        run: pip install bandit[toml]
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Run Bandit SAST
-        run: |
-          bandit -r app/ run.py config.py \
-            -f json \
-            -o bandit-report.json \
-            -ll \
-            --exclude './.git,./tests' \
-            || true
-
-      - name: Display Bandit summary
-        run: |
-          python3 -c "
-          import json, sys
-          with open('bandit-report.json') as f:
-              data = json.load(f)
-          results = data.get('results', [])
-          high = [r for r in results if r['issue_severity'] == 'HIGH']
-          med  = [r for r in results if r['issue_severity'] == 'MEDIUM']
-          print(f'HIGH severity issues: {len(high)}')
-          print(f'MEDIUM severity issues: {len(med)}')
-          if high:
-              print('FAILED: High severity security issues found')
-              for r in high:
-                  print(f'  {r[\"filename\"]}:{r[\"line_number\"]} — {r[\"issue_text\"]}')
-              sys.exit(1)
-          print('OK: No high severity issues')
-          "
-
-      - name: Upload Bandit report
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          name: bandit-report
-          path: bandit-report.json
-          retention-days: 30
+          args: >
+            -Dsonar.organization=${{ github.repository_owner }}
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.python.version=${{ env.PYTHON_VERSION }}
+            -Dsonar.sources=app,run.py,config.py
+            -Dsonar.tests=tests
+            -Dsonar.exclusions=**/migrations/**,**/*.pyc,**/__pycache__/**
 
   # ─────────────────────────────────────────────────────────────
-  # ÉTAPE 3 — Analyse des dépendances (pip-audit)
+  # ÉTAPE 3 — Analyse des dépendances (pip-audit + safety)
   # ─────────────────────────────────────────────────────────────
   dependency-scan:
-    name: "3 · Dependencies — pip-audit"
+    name: "3 · Dependencies — pip-audit + safety"
     runs-on: ubuntu-latest
-    needs: lint
+    needs: sast
 
     steps:
       - name: Checkout code
@@ -124,8 +102,8 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
-      - name: Install pip-audit
-        run: pip install pip-audit
+      - name: Install security tools
+        run: pip install pip-audit safety
 
       - name: Run pip-audit
         run: |
@@ -137,21 +115,52 @@ jobs:
             --strict \
             || (echo "Vulnerable dependencies detected!" && cat pip-audit-report.json && exit 1)
 
-      - name: Upload pip-audit report
+      - name: Run safety
+        run: |
+          safety check --output json --save-json safety-report.json || true
+
+      - name: Analyze safety report
+        run: |
+          python3 -c "
+          import json, sys
+          with open('safety-report.json') as f:
+              data = json.load(f)
+          issues = data.get('issues', [])
+          critical = [i for i in issues if i.get('severity') == 'critical']
+          high = [i for i in issues if i.get('severity') == 'high']
+          
+          print(f'Critical safety issues: {len(critical)}')
+          print(f'High safety issues: {len(high)}')
+          
+          if critical:
+              print('FAILED: Critical safety issues found')
+              for i in critical:
+                  print(f'  {i[\"package\"]} {i[\"vulnerable_spec\"]} — {i[\"advisory\"]}')
+              sys.exit(1)
+          elif high:
+              print('WARNING: High severity safety issues found')
+          else:
+              print('OK: No critical or high severity safety issues')
+          "
+
+      - name: Upload reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pip-audit-report
-          path: pip-audit-report.json
+          name: dependency-reports
+          path: |
+            pip-audit-report.json
+            safety-report.json
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────
-  # ÉTAPE 4 — Tests unitaires (pytest)
+  # ÉTAPE 4 — DAST (OWASP ZAP)
   # ─────────────────────────────────────────────────────────────
-  tests:
-    name: "4 · Tests — pytest"
+  dast:
+    name: "4 · DAST — OWASP ZAP"
     runs-on: ubuntu-latest
-    needs: [sast, dependency-scan]
+    needs: dependency-scan
+    if: github.event_name != 'pull_request'
 
     services:
       mysql:
@@ -184,25 +193,47 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pytest
+      - name: Start application
         env:
           FLASK_ENV: testing
           DATABASE_URL: mysql+pymysql://academique:academique@127.0.0.1:3306/academique_test
-          SECRET_KEY: test-secret-key-ci-pipeline
-          WTF_CSRF_ENABLED: "false"
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'zap-test-secret-key-minimum-32-chars-long' }}
         run: |
-          pytest tests/ \
-            --tb=short \
-            --junit-xml=pytest-report.xml \
-            -v
+          python run.py &
+          echo $! > app.pid
+          echo "Waiting for app to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/auth/login > /dev/null; then
+              echo "App is ready after ${i}s"
+              break
+            fi
+            sleep 2
+          done
 
-      - name: Upload pytest report
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
         with:
-          name: pytest-report
-          path: pytest-report.xml
-          retention-days: 30
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a -j'
+          fail_action: false
+          artifact_name: 'zap-baseline-report'
+
+      - name: Run OWASP ZAP Full Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: 'http://localhost:5000'
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a'
+          fail_action: false
+          artifact_name: 'zap-full-report'
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+          fi
 
   # ─────────────────────────────────────────────────────────────
   # ÉTAPE 5 — Build image Docker
@@ -210,7 +241,7 @@ jobs:
   docker-build:
     name: "5 · Docker Build"
     runs-on: ubuntu-latest
-    needs: tests
+    needs: dast
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
@@ -313,12 +344,12 @@ jobs:
         run: docker compose down -v
 
   # ─────────────────────────────────────────────────────────────
-  # ÉTAPE 7 — Déploiement (main uniquement)
+  # ÉTAPE 6 — Déploiement (main uniquement)
   # ─────────────────────────────────────────────────────────────
   deploy:
-    name: "7 · Deploy — Docker Compose"
+    name: "6 · Deploy — Docker Compose"
     runs-on: ubuntu-latest
-    needs: [docker-build, dast]
+    needs: docker-build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: production

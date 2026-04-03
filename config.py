@@ -5,7 +5,7 @@ from datetime import timedelta
 
 
 class BaseConfig:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production-use-long-random-string")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
@@ -31,6 +31,14 @@ class BaseConfig:
 
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600
+
+    # JWT
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback-jwt-key-change-in-prod")
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_TOKEN_LOCATION = ["headers"]
+    JWT_HEADER_NAME = "Authorization"
+    JWT_HEADER_TYPE = "Bearer"
 
 
 class DevelopmentConfig(BaseConfig):

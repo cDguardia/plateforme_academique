@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+import secrets
 
 import click
-from flask import Flask, redirect, render_template, url_for
-from flask_login import current_user, login_required
+from flask import Flask, g, redirect, render_template, url_for, session, request, flash
+from flask_login import current_user, login_required, logout_user
 
 from config import CONFIG_MAP
-from app.extensions import bcrypt, csrf, db, limiter, login_manager
+from app.extensions import bcrypt, cors, csrf, db, jwt, limiter, login_manager
 
 
 def create_app(env: str | None = None) -> Flask:
@@ -21,6 +22,10 @@ def create_app(env: str | None = None) -> Flask:
     # ── Configuration ────────────────────────────────────────────────────────
     cfg_name = env or os.environ.get("FLASK_ENV", "default")
     app.config.from_object(CONFIG_MAP.get(cfg_name, CONFIG_MAP["default"]))
+    if not app.config.get("SECRET_KEY"):
+        if cfg_name == "production":
+            raise RuntimeError("SECRET_KEY must be set in production")
+        app.config["SECRET_KEY"] = secrets.token_hex(32)
 
     # ── Extensions ───────────────────────────────────────────────────────────
     db.init_app(app)
@@ -28,32 +33,90 @@ def create_app(env: str | None = None) -> Flask:
     csrf.init_app(app)
     bcrypt.init_app(app)
     limiter.init_app(app)
+    jwt.init_app(app)
+    cors.init_app(app)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Veuillez vous connecter pour accéder à cette page."
     login_manager.login_message_category = "warning"
 
     # ── User loader ──────────────────────────────────────────────────────────
-    from app.models import User
+    from app.models import User, UserSession
 
     @login_manager.user_loader
     def load_user(user_id: str):
         return User.query.get(int(user_id))
 
     # ── Headers de sécurité HTTP ─────────────────────────────────────────────
+    @app.before_request
+    def waf_middleware():
+        """Middleware WAF simple pour bloquer les attaques courantes"""
+        # Bloquer les User-Agents suspects
+        user_agent = request.headers.get('User-Agent', '').lower()
+        suspicious_ua = ['sqlmap', 'nmap', 'nikto', 'dirbuster', 'gobuster']
+        if any(ua in user_agent for ua in suspicious_ua):
+            from flask import abort
+            abort(403)
+
+        # Bloquer les payloads SQLi dans les paramètres
+        sqli_patterns = ["'", '"', 'union', 'select', 'drop', 'insert', 'update', 'delete', '--', '/*', '*/']
+        for value in request.args.values():
+            if any(pattern in str(value).lower() for pattern in sqli_patterns):
+                abort(403)
+        for value in request.form.values():
+            if any(pattern in str(value).lower() for pattern in sqli_patterns):
+                abort(403)
+
+    @app.before_request
+    def set_csp_nonce():
+        g.csp_nonce = secrets.token_hex(16)
+
+        # Vérification de session fingerprint
+        if current_user.is_authenticated and "session_token" in session:
+            token = session["session_token"]
+            try:
+                data = UserSession.verify_token(token)
+                user_session = UserSession.query.filter_by(
+                    user_id=current_user.id,
+                    token_hash=UserSession.hash_token(token),
+                    is_active=True
+                ).first()
+                if not user_session or user_session.ip_address != request.remote_addr or user_session.user_agent != request.headers.get("User-Agent")[:255]:
+                    logout_user()
+                    session.clear()
+                    flash("Session invalide. Veuillez vous reconnecter.", "danger")
+                    return redirect(url_for("auth.login"))
+                # Mettre à jour dernière activité
+                user_session.last_activity = datetime.utcnow()
+                db.session.commit()
+            except Exception:
+                logout_user()
+                session.clear()
+                flash("Session expirée. Veuillez vous reconnecter.", "danger")
+                return redirect(url_for("auth.login"))
+
     @app.after_request
     def set_security_headers(response):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+
+        csp_nonce = getattr(g, "csp_nonce", "")
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'; "
+            f"style-src 'self' 'nonce-{csp_nonce}'; "
+            f"script-src 'self' 'nonce-{csp_nonce}'; "
             "img-src 'self' data:; "
             "font-src 'self' data:"
         )
+
+        if not app.debug:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+            response.headers.pop("Server", None)
+
         return response
 
     # ── Blueprints ───────────────────────────────────────────────────────────
@@ -62,6 +125,7 @@ def create_app(env: str | None = None) -> Flask:
     from app.routes_messages import messages_bp
     from app.routes_professor import professor_bp
     from app.routes_schedule import schedule_bp
+    from app.routes_api import api_bp
     from app.routes_sessions import sessions_bp
     from app.routes_student import student_bp
 
@@ -72,6 +136,7 @@ def create_app(env: str | None = None) -> Flask:
     app.register_blueprint(messages_bp)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(sessions_bp)
+    app.register_blueprint(api_bp)
 
     # ── Routes globales ──────────────────────────────────────────────────────
     @app.route("/")

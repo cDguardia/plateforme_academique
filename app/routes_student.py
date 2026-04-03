@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import secrets
+from io import BytesIO
+
 from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy import func
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.forms import ProfileStudentForm
-from app.models import Course, Grade, Professor, Student, User, log_audit
+from app.models import Course, Grade, Professor, Student, User, UserSession, log_audit
 from app.rbac import student_required
 
 student_bp = Blueprint("student", __name__)
@@ -304,30 +312,78 @@ def grades():
 @student_bp.route("/grades/export")
 @login_required
 @student_required
+@limiter.limit("5 per minute", error_message="Trop d'exports. Réessayez dans 1 minute.")
 def grades_export():
-    """Export CSV simple du relevé de notes."""
+    """Export PDF sécurisé du relevé de notes."""
     student = _get_student_or_403()
 
+    # Vérification stricte : seulement ses propres notes
     rows = (
-        db.session.query(Grade, Course)
+        db.session.query(Grade, Course, Professor, User)
         .join(Course, Grade.course_id == Course.id)
+        .join(Professor, Course.professor_id == Professor.id)
+        .join(User, Professor.user_id == User.id)
         .filter(Grade.student_id == student.id)
         .order_by(Course.name)
         .all()
     )
 
-    lines = ["Cours,Code,Crédits,Note,Date"]
-    for g, c in rows:
-        grade_val = str(float(g.grade)) if g.grade is not None else "En attente"
-        date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "—"
-        lines.append(f"{c.name},{c.code},{c.credits},{grade_val},{date_val}")
+    # Générer PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'Title',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=1,  # Center
+    )
+    normal_style = styles['Normal']
 
-    csv_content = "\n".join(lines)
-    log_audit("grades_export")
+    story = []
+
+    # Titre
+    story.append(Paragraph("Relevé de Notes", title_style))
+    story.append(Spacer(1, 12))
+
+    # Infos étudiant
+    story.append(Paragraph(f"Étudiant: {current_user.username}", normal_style))
+    story.append(Paragraph(f"Numéro étudiant: {student.student_number}", normal_style))
+    story.append(Paragraph(f"Classe: {student.class_name}", normal_style))
+    story.append(Spacer(1, 12))
+
+    # Tableau des notes
+    data = [["Cours", "Code", "Crédits", "Note", "Date"]]
+    for g, c, p, u in rows:
+        grade_val = f"{float(g.grade):.2f}" if g.grade is not None else "En attente"
+        date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "—"
+        data.append([c.name, c.code, str(c.credits), grade_val, date_val])
+
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    story.append(table)
+
+    doc.build(story)
+
+    # Nom de fichier aléatoire
+    filename = f"releve_{secrets.token_hex(8)}.pdf"
+
+    log_audit("grades_export_pdf", resource_type="student", resource_id=student.id)
+    buffer.seek(0)
     return Response(
-        csv_content,
-        mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment;filename=notes_{current_user.username}.csv"},
+        buffer.getvalue(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"attachment;filename={filename}"},
     )
 
 
@@ -386,3 +442,29 @@ def profile_edit():
         log_audit("profile_edit")
         flash("Profil mis à jour.", "success")
     return redirect(url_for("student.profile"))
+
+
+# ─── SESSIONS ────────────────────────────────────────────────────────────────
+
+@student_bp.route("/profile/sessions")
+@login_required
+@student_required
+def sessions():
+    sessions = UserSession.query.filter_by(user_id=current_user.id, is_active=True).order_by(UserSession.created_at.desc()).all()
+    return render_template("student/sessions.html", sessions=sessions)
+
+
+@student_bp.route("/profile/sessions/<int:session_id>/revoke", methods=["POST"])
+@login_required
+@student_required
+def revoke_session(session_id):
+    session_to_revoke = UserSession.query.filter_by(id=session_id, user_id=current_user.id, is_active=True).first()
+    if not session_to_revoke:
+        flash("Session introuvable.", "danger")
+        return redirect(url_for("student.sessions"))
+
+    session_to_revoke.is_active = False
+    db.session.commit()
+    log_audit("session_revoked", details=f"Session ID: {session_id}")
+    flash("Session révoquée.", "success")
+    return redirect(url_for("student.sessions"))

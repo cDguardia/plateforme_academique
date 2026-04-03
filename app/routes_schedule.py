@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -59,6 +59,78 @@ def view():
 
     day_names = Schedule.DAY_NAMES[:6]
     return render_template("schedule/view.html", by_day=by_day, day_names=day_names)
+
+
+@schedule_bp.route("/api")
+@login_required
+def api():
+    """API JSON pour le calendrier, filtrée par rôle."""
+    week = request.args.get("week", "").strip()
+    if not WEEK_RE.match(week):
+        return jsonify({"error": "Format semaine invalide (YYYY-WNN)"}), 400
+
+    # Calculer les dates de la semaine (lundi à dimanche)
+    from datetime import datetime, timedelta
+    year, wnum = map(int, week.split("-W"))
+    # Trouver le lundi de la semaine
+    jan1 = datetime(year, 1, 1)
+    monday = jan1 + timedelta(days=(wnum-1)*7 - jan1.weekday())
+    week_dates = [monday + timedelta(days=i) for i in range(7)]
+
+    events = []
+
+    if current_user.role == "admin":
+        schedules = Schedule.query.join(Course).all()
+
+    elif current_user.role == "professor":
+        prof = current_user.professor_profile
+        if not prof:
+            abort(403)
+        schedules = (
+            Schedule.query
+            .join(Course, Schedule.course_id == Course.id)
+            .filter(Course.professor_id == prof.id)
+            .all()
+        )
+
+    else:  # student
+        student = current_user.student_profile
+        if not student:
+            abort(403)
+        # Cours inscrits uniquement
+        enrolled_course_ids = (
+            db.session.query(Grade.course_id)
+            .filter_by(student_id=student.id)
+            .subquery()
+        )
+        schedules = (
+            Schedule.query
+            .join(Course, Schedule.course_id == Course.id)
+            .filter(Schedule.course_id.in_(enrolled_course_ids))
+            .all()
+        )
+
+    for s in schedules:
+        course = s.course
+        day_date = week_dates[s.day_of_week]
+        start_dt = datetime.combine(day_date, datetime.strptime(s.start_time, "%H:%M").time())
+        end_dt = datetime.combine(day_date, datetime.strptime(s.end_time, "%H:%M").time())
+
+        events.append({
+            "id": s.id,
+            "title": f"{course.code} - {course.name}",
+            "start": start_dt.isoformat(),
+            "end": end_dt.isoformat(),
+            "extendedProps": {
+                "room": s.room,
+                "professor": course.professor.user.username,
+                "class_name": course.class_name,
+            }
+        })
+
+    response = jsonify(events)
+    response.headers["Cache-Control"] = "private, max-age=300"  # 5 min cache
+    return response
 
 
 # ─── ADMIN CRUD ───────────────────────────────────────────────────────────────

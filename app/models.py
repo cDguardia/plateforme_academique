@@ -1,13 +1,45 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import secrets
 from datetime import datetime
 
+from cryptography.fernet import Fernet, InvalidToken
 from flask import request
 from flask_login import UserMixin, current_user
 
 from app.extensions import bcrypt, db
+
+
+# ─── ENCRYPTED TYPE ──────────────────────────────────────────────────────────
+
+class EncryptedType(db.TypeDecorator):
+    """Type SQLAlchemy pour chiffrer les données sensibles avec Fernet."""
+
+    impl = db.Text
+    cache_ok = True
+
+    def __init__(self, key=None):
+        super().__init__()
+        self.key = key or os.environ.get("FERNET_KEY")
+        if not self.key:
+            raise ValueError("FERNET_KEY must be set")
+        self.fernet = Fernet(self.key.encode())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return self.fernet.encrypt(value.encode()).decode()
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        try:
+            return self.fernet.decrypt(value.encode()).decode()
+        except InvalidToken:
+            return None  # Données corrompues
 
 
 # ─── USER ────────────────────────────────────────────────────────────────────
@@ -17,15 +49,62 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    email = db.Column(EncryptedType, unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="student")
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # 2FA TOTP
-    totp_secret = db.Column(db.String(64), nullable=True)
+    totp_secret = db.Column(db.String(256), nullable=True)
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    backup_codes = db.Column(db.Text, nullable=True)  # JSON list of hashed codes
+
+    @staticmethod
+    def _get_fernet() -> Fernet | None:
+        key = os.environ.get("FERNET_KEY")
+        if not key:
+            return None
+        if isinstance(key, str):
+            key = key.encode()
+        return Fernet(key)
+
+    def set_totp_secret(self, secret: str) -> None:
+        fernet = self._get_fernet()
+        if fernet:
+            self.totp_secret = fernet.encrypt(secret.encode()).decode()
+        else:
+            self.totp_secret = secret
+
+    def get_totp_secret(self) -> str | None:
+        if not self.totp_secret:
+            return None
+        fernet = self._get_fernet()
+        if fernet:
+            try:
+                return fernet.decrypt(self.totp_secret.encode()).decode()
+            except InvalidToken:
+                return None
+        return self.totp_secret
+
+    def generate_backup_codes(self) -> list[str]:
+        """Génère 10 codes de récupération."""
+        codes = [secrets.token_hex(4).upper() for _ in range(10)]
+        hashed = [hashlib.sha256(code.encode()).hexdigest() for code in codes]
+        self.backup_codes = json.dumps(hashed)
+        return codes
+
+    def verify_backup_code(self, code: str) -> bool:
+        """Vérifie et consomme un code de récupération."""
+        if not self.backup_codes:
+            return False
+        hashed_codes = json.loads(self.backup_codes)
+        code_hash = hashlib.sha256(code.upper().encode()).hexdigest()
+        if code_hash in hashed_codes:
+            hashed_codes.remove(code_hash)
+            self.backup_codes = json.dumps(hashed_codes) if hashed_codes else None
+            return True
+        return False
 
     # Sessions actives
     active_sessions = db.relationship(
@@ -86,7 +165,7 @@ class Student(db.Model):
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
         unique=True, nullable=False
     )
-    student_number = db.Column(db.String(20), unique=True, nullable=True)
+    student_number = db.Column(EncryptedType, unique=True, nullable=True)
     class_name = db.Column(db.String(50), nullable=True)
 
     user = db.relationship("User", back_populates="student_profile")
@@ -167,6 +246,8 @@ class AuditLog(db.Model):
     resource_type = db.Column(db.String(50), nullable=True)
     resource_id = db.Column(db.Integer, nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    status_code = db.Column(db.Integer, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     user = db.relationship("User", back_populates="audit_logs")
@@ -266,6 +347,7 @@ def log_audit(
     resource_type: str | None = None,
     resource_id: int | None = None,
     username: str | None = None,
+    status_code: int | None = None,
 ) -> None:
     """Enregistre une action dans les logs d'audit.
     Peut être appelé en dehors d'un contexte utilisateur connecté (ex: login_failed).
@@ -288,6 +370,8 @@ def log_audit(
             resource_type=resource_type,
             resource_id=resource_id,
             ip_address=ip[:45] if ip else None,
+            user_agent=request.headers.get("User-Agent")[:255] if request.headers.get("User-Agent") else None,
+            status_code=status_code,
         )
         db.session.add(entry)
         db.session.commit()

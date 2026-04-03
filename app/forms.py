@@ -47,7 +47,7 @@ class RegisterForm(FlaskForm):
     )
     role = SelectField(
         "Rôle",
-        choices=[("student", "Étudiant"), ("professor", "Professeur"), ("admin", "Admin")],
+        choices=[("student", "Étudiant"), ("professor", "Professeur")],
         validators=[DataRequired()],
     )
     password = PasswordField(
@@ -59,13 +59,17 @@ class RegisterForm(FlaskForm):
         validators=[DataRequired(), EqualTo("password", "Les mots de passe ne correspondent pas.")],
     )
 
+    def validate_role(self, field) -> None:  # noqa: ANN001
+        if field.data not in ("student", "professor"):
+            raise ValidationError("Rôle invalide.")
+
     def validate_username(self, field) -> None:  # noqa: ANN001
         if User.query.filter_by(username=field.data.strip()).first():
-            raise ValidationError("Ce nom d'utilisateur est déjà pris.")
+            raise ValidationError("Impossible de créer ce compte.")
 
     def validate_email(self, field) -> None:  # noqa: ANN001
         if User.query.filter_by(email=field.data.strip().lower()).first():
-            raise ValidationError("Cette adresse e-mail est déjà utilisée.")
+            raise ValidationError("Impossible de créer ce compte.")
 
 
 class ChangePasswordForm(FlaskForm):

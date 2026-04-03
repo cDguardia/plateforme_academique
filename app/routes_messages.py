@@ -121,12 +121,13 @@ def compose():
         if receiver_id not in allowed_ids:
             abort(403)
 
+        clean_subject = bleach.clean(form.subject.data, tags=[], strip=True)[:200]
         clean_body = bleach.clean(form.body.data, tags=ALLOWED_TAGS, strip=True)[:2000]
 
         msg = Message(
             sender_id=current_user.id,
             receiver_id=receiver_id,
-            subject=form.subject.data.strip()[:200],
+            subject=clean_subject,
             body=clean_body,
         )
         db.session.add(msg)

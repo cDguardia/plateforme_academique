@@ -2,6 +2,11 @@
 {% block title %}Emploi du temps{% endblock %}
 {% block page_title %}Emploi du temps{% endblock %}
 
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+{% endblock %}
+
 {% block content %}
 
 {% if current_user.role == 'admin' %}
@@ -10,44 +15,68 @@
 </div>
 {% endif %}
 
-{% set colors = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'] %}
+<div id="calendar"></div>
 
-{% set has_any = namespace(v=false) %}
-{% for day_idx, slots in by_day.items() %}
-  {% if slots %}{% set has_any.v = true %}{% endif %}
-{% endfor %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'fr',
+        firstDay: 1, // Lundi
+        slotMinTime: '08:00:00',
+        slotMaxTime: '18:00:00',
+        height: 'auto',
+        events: {
+            url: '{{ url_for("schedule.api") }}',
+            method: 'GET',
+            extraParams: function() {
+                // Semaine actuelle
+                var now = new Date();
+                var year = now.getFullYear();
+                var weekNum = getWeekNumber(now);
+                return {
+                    week: year + '-W' + (weekNum < 10 ? '0' : '') + weekNum
+                };
+            },
+            failure: function() {
+                alert('Erreur de chargement du calendrier.');
+            }
+        },
+        eventClick: function(info) {
+            var props = info.event.extendedProps;
+            alert(
+                info.event.title + '\n' +
+                'Salle: ' + (props.room || 'N/A') + '\n' +
+                'Professeur: ' + props.professor + '\n' +
+                'Classe: ' + props.class_name
+            );
+        },
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Aujourd\'hui',
+            month: 'Mois',
+            week: 'Semaine',
+            day: 'Jour'
+        }
+    });
+    calendar.render();
+});
 
-{% if not has_any.v %}
-<div class="empty-state">
-  <div class="icon">📅</div>
-  <p>Aucun créneau planifié pour le moment.</p>
-  {% if current_user.role == 'admin' %}
-  <a href="{{ url_for('schedule.create') }}" class="btn btn-primary" style="margin-top:12px;">
-    Ajouter le premier créneau
-  </a>
-  {% endif %}
-</div>
-{% else %}
+function getWeekNumber(d) {
+    var date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    var week1 = new Date(date.getFullYear(), 0, 4);
+    return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+</script>
 
-<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px;">
-  {% for day_idx in range(6) %}
-  {% set slots = by_day[day_idx] %}
-  {% if slots %}
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">{{ day_names[day_idx] }}</div>
-    </div>
-    <div style="padding:12px 16px; display:flex; flex-direction:column; gap:10px;">
-      {% for slot in slots %}
-      {% set color = colors[loop.index0 % colors|length] %}
-      <div style="border-left:3px solid {{ color }}; padding:8px 12px;
-                  background:var(--surface2); border-radius:0 8px 8px 0;">
-        <div style="font-size:13px; font-weight:600; color:var(--text);">
-          {{ slot.course.name }}
-        </div>
-        <div style="font-size:12px; color:var(--text-dim); margin-top:3px;">
-          {{ slot.start_time }} – {{ slot.end_time }}
-          {% if slot.room %} · Salle {{ slot.room }}{% endif %}
+{% endblock %}
         </div>
         <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">
           <span class="badge badge-blue">{{ slot.course.class_name }}</span>
