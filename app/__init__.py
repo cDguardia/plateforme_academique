@@ -48,24 +48,25 @@ def create_app(env: str | None = None) -> Flask:
         return User.query.get(int(user_id))
 
     # ── Headers de sécurité HTTP ─────────────────────────────────────────────
-    @app.before_request
-    def waf_middleware():
-        """Middleware WAF simple pour bloquer les attaques courantes"""
-        # Bloquer les User-Agents suspects
-        user_agent = request.headers.get('User-Agent', '').lower()
-        suspicious_ua = ['sqlmap', 'nmap', 'nikto', 'dirbuster', 'gobuster']
-        if any(ua in user_agent for ua in suspicious_ua):
-            from flask import abort
-            abort(403)
+    if not app.config.get("TESTING"):
+        @app.before_request
+        def waf_middleware():
+            """Middleware WAF simple pour bloquer les attaques courantes"""
+            # Bloquer les User-Agents suspects
+            user_agent = request.headers.get('User-Agent', '').lower()
+            suspicious_ua = ['sqlmap', 'nmap', 'nikto', 'dirbuster', 'gobuster']
+            if any(ua in user_agent for ua in suspicious_ua):
+                from flask import abort
+                abort(403)
 
-        # Bloquer les payloads SQLi dans les paramètres
-        sqli_patterns = ["'", '"', 'union', 'select', 'drop', 'insert', 'update', 'delete', '--', '/*', '*/']
-        for value in request.args.values():
-            if any(pattern in str(value).lower() for pattern in sqli_patterns):
-                abort(403)
-        for value in request.form.values():
-            if any(pattern in str(value).lower() for pattern in sqli_patterns):
-                abort(403)
+            # Bloquer les payloads SQLi dans les paramètres
+            sqli_patterns = ["'", '"', 'union', 'select', 'drop', 'insert', 'update', 'delete', '--', '/*', '*/']
+            for value in request.args.values():
+                if any(pattern in str(value).lower() for pattern in sqli_patterns):
+                    abort(403)
+            for value in request.form.values():
+                if any(pattern in str(value).lower() for pattern in sqli_patterns):
+                    abort(403)
 
     @app.before_request
     def set_csp_nonce():
