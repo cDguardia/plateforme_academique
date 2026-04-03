@@ -218,7 +218,8 @@ jobs:
         env:
           FLASK_ENV: testing
           DATABASE_URL: mysql+pymysql://academique:academique@127.0.0.1:3306/academique_test
-          SECRET_KEY: ${{ secrets.SECRET_KEY || 'zap-test-secret-key-minimum-32-chars-long' }}
+          SECRET_KEY: zap-test-secret-key-minimum-32-chars-long
+          FERNET_KEY: I5zvDebYSGLzHt-oWiBOL21govf9UQQa4huvQ8iMs78=
         run: |
           python run.py &
           echo $! > app.pid
