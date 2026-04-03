@@ -49,7 +49,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(EncryptedType, unique=True, nullable=False, index=True)
+    email = db.Column(EncryptedType, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="student")
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -165,7 +165,7 @@ class Student(db.Model):
         db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
         unique=True, nullable=False
     )
-    student_number = db.Column(EncryptedType, unique=True, nullable=True)
+    student_number = db.Column(EncryptedType, nullable=True)
     class_name = db.Column(db.String(50), nullable=True)
 
     user = db.relationship("User", back_populates="student_profile")
