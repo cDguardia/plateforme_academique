@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
-from flask_limiter import Limiter
 
-from app.extensions import db, limiter
+from app.extensions import limiter
 from app.models import User
-from app.rbac import admin_required, professor_required, student_required
+from app.rbac import admin_required, student_required
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 

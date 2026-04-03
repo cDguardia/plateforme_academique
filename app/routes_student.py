@@ -8,13 +8,12 @@ from flask_login import current_user, login_required
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy import func
 
 from app.extensions import db, limiter
 from app.forms import ProfileStudentForm
-from app.models import Course, Grade, Professor, Student, User, UserSession, log_audit
+from app.models import Course, Grade, Professor, User, UserSession, log_audit
 from app.rbac import student_required
 
 student_bp = Blueprint("student", __name__)
@@ -134,15 +133,9 @@ def courses():
         .order_by(Course.name)
         .all()
     )
-    available = [
-        {"course": c, "professor_name": u.username, "id": c.id,
-         "name": c.name, "code": c.code, "class_name": c.class_name,
-         "credits": c.credits}
-        for c, p, u in available_rows
-    ]
     # Attribuer les propriétés directement pour simplifier le template
     available_display = []
-    for c, p, u in available_rows:
+    for c, _p, u in available_rows:
         available_display.append({
             "id": c.id, "name": c.name, "code": c.code,
             "class_name": c.class_name, "credits": c.credits,
@@ -355,9 +348,9 @@ def grades_export():
 
     # Tableau des notes
     data = [["Cours", "Code", "Crédits", "Note", "Date"]]
-    for g, c, p, u in rows:
+    for g, c, _p, _u in rows:
         grade_val = f"{float(g.grade):.2f}" if g.grade is not None else "En attente"
-        date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "—"
+        date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "\u2014"
         data.append([c.name, c.code, str(c.credits), grade_val, date_val])
 
     table = Table(data)
@@ -396,7 +389,6 @@ def profile():
     student = _get_student_or_403()
 
     # Stats académiques
-    total = Grade.query.filter_by(student_id=student.id).count()
     graded = Grade.query.filter_by(student_id=student.id).filter(Grade.grade.isnot(None)).all()
     avg = sum(float(g.grade) for g in graded) / len(graded) if graded else None
     validated = [g for g in graded if float(g.grade) >= 10]
@@ -450,7 +442,9 @@ def profile_edit():
 @login_required
 @student_required
 def sessions():
-    sessions = UserSession.query.filter_by(user_id=current_user.id, is_active=True).order_by(UserSession.created_at.desc()).all()
+    sessions = UserSession.query.filter_by(
+        user_id=current_user.id, is_active=True
+    ).order_by(UserSession.created_at.desc()).all()
     return render_template("student/sessions.html", sessions=sessions)
 
 

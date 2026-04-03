@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import re
 
-from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.forms import ScheduleForm
-from app.models import Course, Grade, Professor, Schedule, Student, log_audit
+from app.models import Course, Grade, Schedule, log_audit
 from app.rbac import admin_required
 
 schedule_bp = Blueprint("schedule", __name__, url_prefix="/schedule")

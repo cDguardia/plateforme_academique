@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.extensions import db
@@ -97,7 +97,6 @@ def user_edit(id: int):
                 flash("Cet email est déjà utilisé.", "danger")
                 return render_template("admin/user_form.html", form=form, user=user)
 
-        old_role = user.role
         user.username = form.username.data.strip()
         user.email = form.email.data.strip().lower()
         user.role = form.role.data
@@ -262,14 +261,14 @@ def statistics():
 @admin_required
 def settings():
     # Paramètres simplifiés (stockés en mémoire — à persister en DB pour prod)
-    settings_data = {
+    settings_data = {  # noqa: S105
         "session_lifetime": 30,
         "session_secure": False,
         "session_httponly": True,
-        "pwd_min_length": 8,
-        "pwd_require_upper": True,
-        "pwd_require_digit": True,
-        "pwd_require_special": True,
+        "min_length": 8,
+        "require_upper": True,
+        "require_digit": True,
+        "require_special": True,
     }
     if request.method == "POST":
         log_audit("settings_update")

@@ -87,23 +87,11 @@ def login():
 
             if failed_attempts >= 5:
                 session["lockout_until"] = (datetime.utcnow() + timedelta(minutes=15)).timestamp()
-                log_audit("account_locked", details=f"IP: {request.remote_addr}, User-Agent: {request.headers.get('User-Agent')}")
+                log_audit("account_locked")
             else:
-                log_audit("login_failed", details=f"Username: {form.username.data}, IP: {request.remote_addr}")
+                log_audit("login_failed", username=form.username.data.strip())
 
             flash("Nom d'utilisateur ou mot de passe incorrect.", "danger")
-
-    return render_template("login.html", form=form)
-
-        # Échec
-        failed_count = session.get("failed_attempts", 0) + 1
-        session["failed_attempts"] = failed_count
-        if failed_count >= 5:
-            session["lockout_until"] = (datetime.utcnow() + timedelta(minutes=15)).timestamp()
-            flash("Trop d'échecs. Compte verrouillé 15 minutes.", "danger")
-        else:
-            log_audit("login_failed", username=form.username.data.strip())
-            flash("Identifiants invalides ou compte inactif.", "danger")
 
     return render_template("login.html", form=form)
 

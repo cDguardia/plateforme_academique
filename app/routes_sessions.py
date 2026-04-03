@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 
@@ -10,7 +8,7 @@ from app.models import UserSession, log_audit
 
 sessions_bp = Blueprint("sessions", __name__, url_prefix="/sessions")
 
-SESSION_TOKEN_KEY = "_session_token"
+SESSION_TOKEN_KEY = "_session_token"  # noqa: S105
 
 
 def create_user_session(user_id: int) -> str:
