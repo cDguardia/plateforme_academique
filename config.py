@@ -33,7 +33,7 @@ class BaseConfig:
     WTF_CSRF_TIME_LIMIT = 3600
 
     # JWT
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback-jwt-key-change-in-prod")
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")  # noqa: S105
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_TOKEN_LOCATION = ["headers"]

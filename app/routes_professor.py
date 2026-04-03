@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.forms import CourseForm, ProfileProfessorForm
-from app.models import Course, Grade, Professor, Student, User, log_audit
+from app.models import Course, Grade, Student, User, log_audit
 from app.rbac import professor_required
 
 professor_bp = Blueprint("professor", __name__)
@@ -166,8 +166,17 @@ def course_detail(id: int):
 
     from sqlalchemy import func
     sc = Grade.query.filter_by(course_id=course.id).count()
-    avg = db.session.query(func.avg(Grade.grade)).filter_by(course_id=course.id).filter(Grade.grade.isnot(None)).scalar()
-    given = Grade.query.filter_by(course_id=course.id).filter(Grade.grade.isnot(None)).count()
+    avg = (
+        db.session.query(func.avg(Grade.grade))
+        .filter_by(course_id=course.id)
+        .filter(Grade.grade.isnot(None))
+        .scalar()
+    )
+    given = (
+        Grade.query.filter_by(course_id=course.id)
+        .filter(Grade.grade.isnot(None))
+        .count()
+    )
     stats = {
         "student_count": sc,
         "average": float(avg) if avg else None,

@@ -3,7 +3,6 @@ from __future__ import annotations
 import bleach
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import or_
 
 from app.extensions import db
 from app.forms import MessageForm
