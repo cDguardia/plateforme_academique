@@ -249,7 +249,7 @@ jobs:
           rules_file_name: '.github/zap-rules.tsv'
           cmd_options: '-a -j'
           fail_action: false
-          artifact_name: 'zap-baseline-report'
+          artifact_name: 'zap_baseline_report'
 
       - name: Run OWASP ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.10.0
@@ -258,7 +258,7 @@ jobs:
           rules_file_name: '.github/zap-rules.tsv'
           cmd_options: '-a'
           fail_action: false
-          artifact_name: 'zap-full-report'
+          artifact_name: 'zap_full_report'
 
       - name: Stop application
         if: always()
