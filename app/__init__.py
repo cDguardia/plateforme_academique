@@ -76,22 +76,18 @@ def create_app(env: str | None = None) -> Flask:
         if current_user.is_authenticated and "session_token" in session:
             token = session["session_token"]
             try:
-                UserSession.verify_token(token)
                 user_session = UserSession.query.filter_by(
                     user_id=current_user.id,
                     token_hash=UserSession.hash_token(token),
-                    is_active=True
+                    revoked=False
                 ).first()
-                if not user_session or (
-                    user_session.ip_address != request.remote_addr
-                    or user_session.user_agent != request.headers.get("User-Agent")[:255]
-                ):
+                if not user_session:
                     logout_user()
                     session.clear()
                     flash("Session invalide. Veuillez vous reconnecter.", "danger")
                     return redirect(url_for("auth.login"))
                 # Mettre à jour dernière activité
-                user_session.last_activity = datetime.utcnow()
+                user_session.last_seen = datetime.utcnow()
                 db.session.commit()
             except Exception:
                 logout_user()
