@@ -46,20 +46,6 @@ Source code
 Issue tracker Jira
 And if you need help, visit our online community to search for answers and reach out with questions!
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Owasp top 10:
 
 The most current released version is the 2025 
@@ -296,8 +282,6 @@ CARAF - Crypto Agility Risk Assessment Framework (CARAF) helps organizations eva
 PQBench - PQBench offers a curated collection of cryptographic use cases, each mapped to relevant evaluation metrics tailored for Post-Quantum Cryptography (PQC). - Comcast Cyber Security & Privacy Research
 Please let us know if you are aware of any other high quality application security tools that are free for open source (or simply add them to this page). We are particularly interested in identifying and listing commercial tools that are free for open source, as they tend to be better and easier to use than open source (free) tools. If you are aware of any missing from this list, please add them, or let us know (dave.wichers (at) owasp.org) and we’ll confirm they are free, and add them for you. Please encourage your favorite commercial tool vendor to make their tool free for open source projects as well!!
 Finally, please forward this page to the open source projects you rely on and encourage them to use these free tools!
-
-
 
 Flake8:
 intégrer via Github Actions 
