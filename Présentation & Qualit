@@ -8,8 +8,6 @@ SonarLint for VSCode v3.6 and above has the option to enable/disable receive not
 
 Directement dans GitHub, vous pouvez savoir pourquoi vous avez un problème, où il est situé et comment il circule dans votre code. 
 
-https://youtu.be/6zvBuZr8CeI
-
 SonarQube for IntelliJ brings real-time code verification, quick-fix guidance, and security detection across 40+ languages, helping you catch issues before you commit.
 What is SonarQube for IDE?
 SonarQube for IDE is a free developer companion brought to you by Sonar that brings real-time static analysis, quick-fix guidance, and security issue detection directly into your coding editor. It surfaces issues as you code, explains why they matter, and suggests clear next steps — so you can improve quality at the source without breaking your flow. The complete list of supported languages, frameworks, and IaC platforms is available on the Rules and languages page.
