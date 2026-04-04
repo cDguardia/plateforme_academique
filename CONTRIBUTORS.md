@@ -7,6 +7,7 @@
 | **Clément Duval** | Lead dev — Backend Flask, RBAC, modèles ORM, CI/CD | [@cDguardia](https://github.com/cDguardia) |
 | **Hadrien** | Base de données MySQL, schéma, seed data | branche `hadrien` |
 | **Alicia** | Frontend HTML/CSS, templates Jinja2 | branche `Alicia` |
+| **Alexis** |Présentation & Qualité|@agalland211|
 
 ## Répartition des tâches
 
@@ -28,6 +29,10 @@
 - Templates HTML Jinja2 (24 fichiers)
 - Thème CSS dark mode
 - Intégration des formulaires WTForms dans les templates
+
+### Alexis
+- Approfondissement de SolarLint/Flake8/Owasp top 10
+
 
 ---
 
