@@ -1,0 +1,70 @@
+name: Flask App CI/CD
+
+# La pipeline se déclenche à chaque 'push' ou 'pull request' sur la branche main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Création d'un service MySQL éphémère pour les tests de la pipeline
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: flask_test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    # 1. Récupérer le code source
+    - name: Checkout du code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Requis pour une bonne analyse SonarCloud
+
+    # 2. Installer et configurer Python
+    - name: Configuration de Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10' # À adapter selon votre version
+
+    # 3. Installer les dépendances
+    - name: Installation des dépendances
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest pytest-cov
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    # 4. Linting avec Flake8
+    - name: Analyse de code avec Flake8
+      run: |
+        # Arrête le build s'il y a des erreurs de syntaxe graves
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Affiche les avertissements de style (ne fait pas échouer la pipeline)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    # 5. Lancer les tests avec Pytest et générer le rapport de couverture
+    - name: Exécution des tests
+      env:
+        # Variables d'environnement pour que Flask se connecte au MySQL local de GitHub Actions
+        DATABASE_URL: mysql+pymysql://root:root_password@127.0.0.1:3306/flask_test_db
+      run: |
+        pytest --cov=app tests/ --cov-report=xml
+
+    # 6. Analyse Qualité et Sécurité avec SonarCloud
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Fourni automatiquement par GitHub
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}    # À configurer dans les secrets GitHub
