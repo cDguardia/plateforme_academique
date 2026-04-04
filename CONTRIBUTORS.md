@@ -32,7 +32,6 @@
 
 ### Alexis
 - Approfondissement de SolarLint/Flake8/Owasp top 10
--pipeline CI/CD
 
 
 ---
