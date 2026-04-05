@@ -117,6 +117,10 @@
             padding-bottom: 0;
         }
 
+        .delete-btn {
+            display: none;
+        }
+
         /* --- Actions rapides et Supports --- */
         .action-item {
             display: flex;
@@ -184,6 +188,110 @@
             background-color: #0056b3;
         }
 
+        /* --- Modal pour ajouter un DS --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.45);
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 6% auto;
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+            width: 90%;
+            max-width: 420px;
+        }
+
+        .modal-header {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.95em;
+            box-sizing: border-box;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.18);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn-done,
+        .btn-cancel {
+            flex: 1;
+            border: none;
+            border-radius: 8px;
+            padding: 11px 14px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-done {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-done:hover {
+            background-color: #218838;
+        }
+
+        .btn-cancel {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-cancel:hover {
+            background-color: #cacaca;
+        }
+
+        .success-message {
+            display: none;
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            font-size: 0.95em;
+        }
+
         /* --- Titre final en bas à droite --- */
         .main-title {
             position: absolute;
@@ -222,19 +330,19 @@
                 <h2 class="card-title">Emploi du temps</h2>
                 
                 <div class="slot slot-orange">
-                    08:30 - 10:00: Histoire des Uchihas - Grade 11 (Classe 667)
+                    08:30 - 10:00: Histoire des Uchihas - Classe 667
                 </div>
                 
                 <div class="slot slot-empty-grey"></div>
                 
                 <div class="slot slot-grey">
-                    10:15 - 11:45: Littérature Japonaise- Grade 10-A (Classe 911)
+                    10:15 - 11:45: Littérature Japonaise - Classe 911
                 </div>
                 
                 <div class="slot slot-empty-grey"></div>
                 
                 <div class="slot slot-pink">
-                    13:00 - 14:30:Iere Grande Guerre Ninja - Grade 11-A (Classe 404)
+                    13:00 - 14:30:Iere Grande Guerre Ninja - Classe 404
                 </div>
                 
                 <div class="slot slot-empty-dashed"></div>
@@ -245,19 +353,19 @@
         <div class="column">
             <div class="card">
                 <h2 class="card-title">Prochains DS</h2>
-                <ul class="list-group">
-                    <li class="list-item">Grade 11 Origines du Sharingan(S. 301) - 2 nov.</li>
-                    <li class="list-item">Grade 10 Histoire de l'Akatsuki<br>(En ligne) - 4 nov.</li>
+                <ul class="list-group" id="dsList">
+                    <li class="list-item"><span>Classe 667 : Origines du Sharingan(S. 301) - 2 nov.</span><button type="button" class="delete-btn">Supprimer</button></li>
+                    <li class="list-item"><span>Classe 22 : Histoire de l'Akatsuki<br>(En ligne) - 4 nov.</span><button type="button" class="delete-btn">Supprimer</button></li>
                 </ul>
-                <button class="btn-add">+ Ajouter un DS</button>
+                <button class="btn-add" id="addDsBtn">+ Ajouter un DS</button>
             </div>
             <div class="card" style="flex-grow: 1;">
                 <h2 class="card-title">Travail donné</h2>
-                <ul class="list-group">
-                    <li class="list-item">Grade 11-A Histoire de l'Art:<br>Ébauche du Projet (À rendre le 8 nov.)</li>
-                    <li class="list-item">Grade 10-A Histoire : Les démons à l'ère des Shinobis<br>(À rendre vendredi)</li>
+                <ul class="list-group" id="workList">
+                    <li class="list-item"><span>Classe 404 : Histoire de l'Art:<br>Ébauche du Projet (À rendre le 8 nov.)</span><button type="button" class="delete-btn">Supprimer</button></li>
+                    <li class="list-item"><span>Classe 911 : Histoire : Les démons à l'ère des Shinobis<br>(À rendre vendredi)</span><button type="button" class="delete-btn">Supprimer</button></li>
                 </ul>
-                <button class="btn-add">+ Ajouter un travail</button>
+                <button class="btn-add" id="addWorkBtn">+ Ajouter un travail</button>
             </div>
         </div>
 
@@ -267,27 +375,23 @@
                 
                 <div class="subtitle" style="margin-top: 0;">Listes des classes</div>
                 <ul class="list-group">
-                    <li class="list-item">Grade 11-A Histoire de l'Art<br>(28 Élèves)</li>
-                    <li class="list-item">Grade 10-A Histoire du pays du Sable<br>(25 Élèves)</li>
-                    <li class="list-item">Grade 11-B Histoire des sorts interdits<br>(22 Élèves)</li>
+                    <li class="list-item">Classe 777 : Histoire de l'Art<br></li>
+                    <li class="list-item">Classe 911 : Histoire du pays du Sable<br></li>
+                    <li class="list-item">Classe 1 : Histoire des sorts interdits<br></li>
                 </ul>
 
                 <div class="subtitle">Actions rapides</div>
                 <button class="action-item">
-                    <span class="icon">👤</span>
-                    <span>Prendre l'appel<br>(Grade 10-A)</span>
+                    <span class="icon"></span>
+                    <span>Prendre l'appel<br>(Classe 404)</span>
                 </button>
                 <button class="action-item">
-                    <span class="icon">📝</span>
+                    <span class="icon"></span>
                     <span>Saisir une Note de Devoir</span>
                 </button>
                 <button class="action-item">
-                    <span class="icon">📅</span>
+                    <span class="icon"></span>
                     <span>Planifier un DS futur</span>
-                </button>
-                <button class="action-item">
-                    <span class="icon">💬</span>
-                    <span>Envoyer un message au groupe des parents</span>
                 </button>
             </div>
         </div>
@@ -296,8 +400,8 @@
             <div class="card">
                 <h2 class="card-title">Appels à faire</h2>
                 <ul class="list-group">
-                    <li class="list-item">Grade 10-A Histoire<br>(Heure 2 - 10:15)</li>
-                    <li class="list-item">Grade 11-B Histoire<br>(Heure 5 - 14:45)</li>
+                    <li class="list-item">Classe 27 Histoire<br>(Heure 2 - 10:15)</li>
+                    <li class="list-item">Classe 3 Histoire<br>(Heure 5 - 14:45)</li>
                 </ul>
             </div>
             <div class="card" style="flex-grow: 1;">
@@ -325,6 +429,159 @@
         <div class="main-title">PROFS</div>
 
     </div>
+
+    <div id="addDsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Ajouter un nouveau DS</div>
+            <form id="addDsForm">
+                <div class="form-group">
+                    <label for="dsClass">Sélectionner une classe</label>
+                    <select id="dsClass" name="dsClass" required>
+                        <option value="">Choisissez une classe</option>
+                        <option>Classe 667</option>
+                        <option>Classe 911</option>
+                        <option>Classe 22</option>
+                        <option>Classe 777</option>
+                        <option>Classe 1</option>
+                        <option>Classe 3</option>
+                        <option>Classe 404</option>
+                        <option>Classe 99</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dsDescription">Description du DS</label>
+                    <input type="text" id="dsDescription" name="dsDescription" placeholder="Ex: Préparer le rapport sur le Sharingan" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="closeDsModal">Annuler</button>
+                    <button type="submit" class="btn-done">Done</button>
+                </div>
+            </form>
+            <div id="dsSuccess" class="success-message">Devoir ajouté avec succès !</div>
+        </div>
+    </div>
+
+    <div id="addWorkModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Ajouter un nouveau travail</div>
+            <form id="addWorkForm">
+                <div class="form-group">
+                    <label for="workClass">Sélectionner une classe</label>
+                    <select id="workClass" name="workClass" required>
+                        <option value="">Choisissez une classe</option>
+                        <option>Classe 667</option>
+                        <option>Classe 911</option>
+                        <option>Classe 22</option>
+                        <option>Classe 777</option>
+                        <option>Classe 1</option>
+                        <option>Classe 3</option>
+                        <option>Classe 404</option>
+                        <option>Classe 99</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="workDescription">Description du travail</label>
+                    <input type="text" id="workDescription" name="workDescription" placeholder="Ex: Rédiger le résumé du chapitre 5" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="closeWorkModal">Annuler</button>
+                    <button type="submit" class="btn-done">Done</button>
+                </div>
+            </form>
+            <div id="workSuccess" class="success-message">Travail ajouté avec succès !</div>
+        </div>
+    </div>
+
+    <script>
+        const addDsBtn = document.getElementById('addDsBtn');
+        const addDsModal = document.getElementById('addDsModal');
+        const closeDsModal = document.getElementById('closeDsModal');
+        const addDsForm = document.getElementById('addDsForm');
+        const dsSuccess = document.getElementById('dsSuccess');
+
+        const addWorkBtn = document.getElementById('addWorkBtn');
+        const addWorkModal = document.getElementById('addWorkModal');
+        const closeWorkModal = document.getElementById('closeWorkModal');
+        const addWorkForm = document.getElementById('addWorkForm');
+        const workSuccess = document.getElementById('workSuccess');
+        const dsList = document.getElementById('dsList');
+        const workList = document.getElementById('workList');
+
+        addDsBtn.addEventListener('click', () => {
+            dsSuccess.style.display = 'none';
+            addDsForm.reset();
+            addDsModal.style.display = 'block';
+        });
+
+        closeDsModal.addEventListener('click', () => {
+            addDsModal.style.display = 'none';
+        });
+
+        addWorkBtn.addEventListener('click', () => {
+            workSuccess.style.display = 'none';
+            addWorkForm.reset();
+            addWorkModal.style.display = 'block';
+        });
+
+        closeWorkModal.addEventListener('click', () => {
+            addWorkModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === addDsModal) {
+                addDsModal.style.display = 'none';
+            }
+            if (event.target === addWorkModal) {
+                addWorkModal.style.display = 'none';
+            }
+        });
+
+        function createListItem(text) {
+            const newLi = document.createElement('li');
+            newLi.className = 'list-item';
+            newLi.innerHTML = `<span>${text}</span><button type="button" class="delete-btn">Supprimer</button>`;
+            return newLi;
+        }
+
+        function attachDeleteHandler(list) {
+            list.addEventListener('click', (event) => {
+                const deleteButton = event.target.closest('.delete-btn');
+                if (!deleteButton) return;
+                const item = deleteButton.closest('.list-item');
+                if (!item) return;
+
+                const confirmed = window.confirm('Êtes-vous sûr de vouloir supprimer cette assignation ?');
+                if (confirmed) {
+                    item.remove();
+                }
+            });
+        }
+
+        attachDeleteHandler(dsList);
+        attachDeleteHandler(workList);
+
+        addDsForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const selectedClass = document.getElementById('dsClass').value;
+            const dsDescription = document.getElementById('dsDescription').value;
+            dsList.appendChild(createListItem(`${selectedClass} : ${dsDescription}`));
+            dsSuccess.style.display = 'block';
+            setTimeout(() => {
+                addDsModal.style.display = 'none';
+            }, 1500);
+        });
+
+        addWorkForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const selectedClass = document.getElementById('workClass').value;
+            const workDescription = document.getElementById('workDescription').value;
+            workList.appendChild(createListItem(`${selectedClass} : ${workDescription}`));
+            workSuccess.style.display = 'block';
+            setTimeout(() => {
+                addWorkModal.style.display = 'none';
+            }, 1500);
+        });
+    </script>
 
 </body>
 </html>
