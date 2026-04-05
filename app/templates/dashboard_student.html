@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'accueil Élèves</title>
+    <style>
+        /* Styles globaux */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f7f7; /* Gris très clair pour le fond */
+            margin: 0;
+            padding: 40px;
+            color: #1a1a1a;
+        }
+
+        /* Barre d'état en haut à droite */
+        .status-bar {
+            text-align: right;
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Conteneur principal */
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 60px;
+        }
+
+        /* Colonnes */
+        .column {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 20px;
+        }
+
+        /* Style des cartes (boîtes blanches) */
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border: 1px solid #e6e6e6;
+        }
+
+        /* Titres des cartes */
+        .card-title {
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            font-size: 0.85em;
+            color: #777;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        /* --- Colonne 1 : Emploi du temps --- */
+        .schedule-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slot {
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            line-height: 1.3;
+            min-height: 45px;
+        }
+
+        .slot-orange { background-color: #f3b971; }
+        .slot-grey { background-color: #e0e0e0; }
+        .slot-pink { background-color: #f4a7a7; }
+
+        .slot-empty-grey {
+            background-color: #eeeeee;
+        }
+
+        .slot-empty-dashed {
+            border: 1px dashed #bbb;
+            background-color: transparent;
+        }
+
+        /* --- Listes génériques (DS, Travail, Notes) --- */
+        .list-group {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .list-item {
+            font-size: 0.95em;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            line-height: 1.4;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* --- Actions rapides et Supports --- */
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.95em;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .action-item:hover {
+            background-color: #f5f5f5;
+        }
+        .action-item:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            font-size: 1.2em;
+            min-width: 25px;
+            text-align: center;
+        }
+
+        /* --- Titre final en bas à droite --- */
+        .main-title {
+            position: absolute;
+            bottom: -30px;
+            right: 0;
+            font-size: 4em;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        /* Responsivité pour les plus petits écrans */
+        @media (max-width: 900px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            .main-title {
+                position: relative;
+                text-align: right;
+                bottom: 0;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        📅 Barre d'état | 01 Novembre 2026
+    </div>
+
+    <div class="dashboard">
+
+        <div class="column">
+            <div class="card schedule-card">
+                <h2 class="card-title">Emploi du temps</h2>
+
+                <div class="slot slot-orange">
+                    <strong>Multiclonage</strong><br>
+                    <span>Uzumaki Naruto</span>
+                </div>
+
+                <div class="slot slot-empty-grey"></div>
+
+                <div class="slot slot-grey">
+                    <strong>Sciences</strong><br>
+                    <span>Orochimaru</span>
+                </div>
+
+                <div class="slot slot-pink">
+                    <strong>Taijutsu</strong><br>
+                    <span>Rock Lee</span>
+                </div>
+
+                <div class="slot slot-empty-dashed"></div>
+                <div class="slot slot-empty-dashed"></div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <h2 class="card-title">Prochains DS</h2>
+                <ul class="list-group">
+                    <li class="list-item">Histoire des Uchihas - 2 nov.</li>
+                    <li class="list-item">Examen Chunin - 30 nov.</li>
+                </ul>
+            </div>
+            <div class="card" style="flex-grow: 1;">
+                <h2 class="card-title">Travail à faire</h2>
+                <div class="list-group">
+                    <div class="list-item">
+                        Choisis trois pays que Sasuke a visités.<br>
+                        Pour chaque pays, trouve :
+                        <ul style="margin-top: 5px; padding-left: 20px;">
+                            <li>La capitale</li>
+                            <li>Le monument</li>
+                            <li>Un bâtiment célèbre</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card" style="height: 100%; box-sizing: border-box;">
+                <h2 class="card-title">Mes notes</h2>
+
+                <div class="subtitle" style="margin-top: 0;">Dernières notes</div>
+                <ul class="list-group">
+                    <li class="list-item">Multiclonage: 15/20</li>
+                    <li class="list-item">Sciences: 12/20</li>
+                    <li class="list-item">Taijutsu: 18/20</li>
+                </ul>
+
+                <div class="subtitle">Actions rapides</div>
+                <a href="devoir.html" class="action-item" style="text-decoration: none; color: inherit;">
+                    <span class="icon">📚</span>
+                    <span>Voir mes devoirs</span>
+                </a>
+                <a href="emploi_du_temps_students.html" class="action-item" style="text-decoration: none; color: inherit;">
+                    <span class="icon">📅</span>
+                    <span>Consulter l'emploi du temps</span>
+                </a>
+                <a href="contact_professor.html" class="action-item" style="text-decoration: none; color: inherit;">
+                    <span class="icon">💬</span>
+                    <span>Contacter mon professeur</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <h2 class="card-title">Absences</h2>
+                <ul class="list-group">
+                    <li class="list-item">Aucune absence ce mois-ci</li>
+                </ul>
+            </div>
+            <div class="card" style="flex-grow: 1;">
+                <h2 class="card-title">Retards</h2>
+                <ul class="list-group">
+                    <li class="list-item">1 retard ce mois-ci<br>(5 min - 15 oct.)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main-title">Eleves</div>
+
+    </div>
+
+</body>
+</html>
