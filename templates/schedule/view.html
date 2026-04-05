@@ -17,13 +17,13 @@
 
 <div id="calendar"></div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
         locale: 'fr',
-        firstDay: 1, // Lundi
+        firstDay: 1,
         slotMinTime: '08:00:00',
         slotMaxTime: '18:00:00',
         height: 'auto',
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
             url: '{{ url_for("schedule.api") }}',
             method: 'GET',
             extraParams: function() {
-                // Semaine actuelle
                 var now = new Date();
                 var year = now.getFullYear();
                 var weekNum = getWeekNumber(now);
@@ -58,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         buttonText: {
-            today: 'Aujourd\'hui',
+            today: "Aujourd'hui",
             month: 'Mois',
             week: 'Semaine',
             day: 'Jour'
@@ -72,33 +71,9 @@ function getWeekNumber(d) {
     date.setHours(0, 0, 0, 0);
     date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
     var week1 = new Date(date.getFullYear(), 0, 4);
-    return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+    return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
+        - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 </script>
-
-{% endblock %}
-        </div>
-        <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">
-          <span class="badge badge-blue">{{ slot.course.class_name }}</span>
-        </div>
-        {% if current_user.role == 'admin' %}
-        <div style="display:flex; gap:6px; margin-top:8px;">
-          <a href="{{ url_for('schedule.edit', id=slot.id) }}"
-             class="btn btn-sm btn-secondary">Modifier</a>
-          <form method="POST" action="{{ url_for('schedule.delete', id=slot.id) }}"
-                onsubmit="return confirm('Supprimer ce créneau ?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-  {% endfor %}
-</div>
-{% endif %}
 
 {% endblock %}
