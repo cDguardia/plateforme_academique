@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Historique appel — {{ course.name }}{% endblock %}
+{% block page_title %}Historique des appels{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+  <a href="{{ url_for('professor.attendance_list') }}">Appel</a>
+  <span>›</span>
+  <a href="{{ url_for('professor.attendance_call', id=course.id) }}">{{ course.name }}</a>
+  <span>›</span>
+  <span>Historique</span>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-20" style="border-left:3px solid var(--accent);">
+  <div class="card-body" style="display:flex; align-items:center; gap:20px; padding:14px 20px;">
+    <div>
+      <span style="font-weight:700; color:var(--text);">{{ course.name }}</span>
+      <span class="badge badge-blue" style="margin-left:8px;">{{ course.class_name }}</span>
+    </div>
+    <div style="margin-left:auto;">
+      <a href="{{ url_for('professor.attendance_call', id=course.id) }}" class="btn btn-primary btn-sm">
+        📋 Faire l'appel aujourd'hui
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">📊 Historique des appels</div>
+  </div>
+
+  {% if history %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th style="text-align:center;">Présents</th>
+          <th style="text-align:center;">Absents</th>
+          <th style="text-align:center;">Retards</th>
+          <th style="text-align:center;">Total</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in history %}
+        <tr>
+          <td style="font-weight:600;">{{ h.date.strftime('%d/%m/%Y') }}</td>
+          <td style="text-align:center;">
+            <span class="badge badge-green">{{ h.presents }}</span>
+          </td>
+          <td style="text-align:center;">
+            {% if h.absents > 0 %}
+            <span class="badge badge-red">{{ h.absents }}</span>
+            {% else %}
+            <span style="color:var(--text-muted);">0</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if h.lates > 0 %}
+            <span class="badge badge-warn">{{ h.lates }}</span>
+            {% else %}
+            <span style="color:var(--text-muted);">0</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">{{ h.total }}</td>
+          <td>
+            <a href="{{ url_for('professor.attendance_call', id=course.id, date=h.date.isoformat()) }}"
+               class="btn btn-outline btn-sm">Modifier</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📊</div>
+    <p>Aucun appel enregistré pour ce cours.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
