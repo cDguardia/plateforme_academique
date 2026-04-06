@@ -345,11 +345,13 @@ jobs:
       - name: Deploy via Docker Compose
         run: |
           echo "Deploying image: ${{ needs.docker-build.outputs.image-tag }}"
-          docker compose pull
+          docker compose build
           docker compose up -d --remove-orphans
-          echo "Deployment complete"
+          echo "Deployment complete — waiting for DB to be healthy..."
+          sleep 30
         env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SECRET_KEY: ci-deploy-secret-key-minimum-32-chars-long
+          FERNET_KEY: I5zvDebYSGLzHt-oWiBOL21govf9UQQa4huvQ8iMs78=
           COMPOSE_PROJECT_NAME: academique
 
       - name: Verify deployment health
