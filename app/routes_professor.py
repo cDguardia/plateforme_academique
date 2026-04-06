@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import desc, func
 
 from app.extensions import db
-from app.forms import CourseForm, ProfileProfessorForm
-from app.models import Course, Grade, Student, User, log_audit
+from app.forms import ProfileProfessorForm
+from app.models import Attendance, Enseignement, Grade, Matiere, Student, User, log_audit
 from app.rbac import professor_required
 
 professor_bp = Blueprint("professor", __name__)
@@ -24,41 +25,48 @@ def dashboard():
         flash("Profil professeur introuvable.", "danger")
         return redirect(url_for("auth.login"))
 
-    my_courses = prof.courses.all()
+    my_ens = prof.enseignements.all()
+    my_ens_ids = [e.id for e in my_ens]
 
-    # Stats
-    total_students = sum(
-        Grade.query.filter_by(course_id=c.id).count() for c in my_courses
-    )
-    grades_given = sum(
-        Grade.query.filter_by(course_id=c.id).filter(Grade.grade.isnot(None)).count()
-        for c in my_courses
-    )
+    # Une seule requête agrégée au lieu de N+1
+    if my_ens_ids:
+        grade_stats = (
+            db.session.query(
+                func.count(Grade.id).label("total"),
+                func.count(Grade.grade).label("graded"),
+            )
+            .filter(Grade.enseignement_id.in_(my_ens_ids))
+            .first()
+        )
+        total_students = grade_stats.total
+        grades_given = grade_stats.graded
+    else:
+        total_students = 0
+        grades_given = 0
+
     pending = total_students - grades_given
     stats = {
-        "my_courses": len(my_courses),
+        "my_courses": len(my_ens),
         "total_students": total_students,
         "grades_given": grades_given,
         "pending_grades": pending,
     }
 
-    # Aperçu des cours avec stats légères
     courses_preview = []
-    for c in my_courses[:5]:
-        sc = Grade.query.filter_by(course_id=c.id).count()
+    for e in my_ens[:5]:
+        sc = Grade.query.filter_by(enseignement_id=e.id).count()
         courses_preview.append({
-            "id": c.id, "name": c.name, "code": c.code,
-            "class_name": c.class_name, "student_count": sc,
+            "id": e.id, "name": e.name, "code": e.code,
+            "class_name": e.class_name, "student_count": sc,
         })
 
-    # Dernières notes
-    from sqlalchemy import desc
     recent = (
-        db.session.query(Grade, Student, User, Course)
+        db.session.query(Grade, Student, User, Enseignement, Matiere)
         .join(Student, Grade.student_id == Student.id)
         .join(User, Student.user_id == User.id)
-        .join(Course, Grade.course_id == Course.id)
-        .filter(Course.professor_id == prof.id)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .filter(Enseignement.professor_id == prof.id)
         .filter(Grade.grade.isnot(None))
         .order_by(desc(Grade.graded_at))
         .limit(8)
@@ -67,11 +75,11 @@ def dashboard():
     recent_grades = [
         {
             "student_name": u.username,
-            "course_name": c.name,
+            "course_name": mat.name,
             "value": float(g.grade),
             "graded_at": g.graded_at,
         }
-        for g, s, u, c in recent
+        for g, s, u, ens, mat in recent
     ]
 
     return render_template(
@@ -82,7 +90,7 @@ def dashboard():
     )
 
 
-# ─── COURSES ─────────────────────────────────────────────────────────────────
+# ─── COURSES (enseignements du prof) ────────────────────────────────────────
 
 @professor_bp.route("/courses")
 @login_required
@@ -92,88 +100,37 @@ def courses():
     if not prof:
         return redirect(url_for("professor.dashboard"))
 
-    from sqlalchemy import func
     course_list = []
-    for c in prof.courses.order_by(Course.name).all():
-        sc = Grade.query.filter_by(course_id=c.id).count()
-        avg = db.session.query(func.avg(Grade.grade)).filter_by(course_id=c.id).filter(Grade.grade.isnot(None)).scalar()
+    for e in prof.enseignements.join(Matiere).order_by(Matiere.name).all():
+        sc = Grade.query.filter_by(enseignement_id=e.id).count()
+        avg = db.session.query(func.avg(Grade.grade)).filter_by(enseignement_id=e.id).filter(Grade.grade.isnot(None)).scalar()
         course_list.append({
-            "id": c.id, "name": c.name, "code": c.code,
-            "class_name": c.class_name, "credits": c.credits,
+            "id": e.id, "name": e.name, "code": e.code,
+            "class_name": e.class_name, "credits": e.credits,
             "student_count": sc,
             "average": float(avg) if avg else None,
         })
     return render_template("professor/courses.html", courses=course_list)
 
 
-@professor_bp.route("/courses/create", methods=["GET", "POST"])
-@login_required
-@professor_required
-def course_create():
-    form = CourseForm()
-    if form.validate_on_submit():
-        prof = current_user.professor_profile
-        # Vérifier unicité du code
-        if Course.query.filter_by(code=form.code.data.upper().strip()).first():
-            flash("Ce code de cours existe déjà.", "danger")
-            return render_template("professor/course_form.html", form=form, course=None)
-        course = Course(
-            professor_id=prof.id,
-            name=form.name.data.strip(),
-            code=form.code.data.upper().strip(),
-            class_name=form.class_name.data.strip().upper(),
-            credits=form.credits.data,
-            description=form.description.data.strip() if form.description.data else None,
-        )
-        db.session.add(course)
-        db.session.commit()
-        log_audit("course_create", resource_type="course", resource_id=course.id)
-        flash(f"Cours « {course.name} » créé.", "success")
-        return redirect(url_for("professor.courses"))
-    return render_template("professor/course_form.html", form=form, course=None)
-
-
-@professor_bp.route("/courses/<int:id>/edit", methods=["GET", "POST"])
-@login_required
-@professor_required
-def course_edit(id: int):
-    course = Course.query.get_or_404(id)
-    # Vérifier propriété
-    if course.professor.user_id != current_user.id:
-        from flask import abort
-        abort(403)
-    form = CourseForm(obj=course)
-    if form.validate_on_submit():
-        course.name = form.name.data.strip()
-        course.class_name = form.class_name.data.strip().upper()
-        course.credits = form.credits.data
-        course.description = form.description.data.strip() if form.description.data else None
-        db.session.commit()
-        log_audit("course_edit", resource_type="course", resource_id=course.id)
-        flash("Cours mis à jour.", "success")
-        return redirect(url_for("professor.courses"))
-    return render_template("professor/course_form.html", form=form, course=course)
-
-
 @professor_bp.route("/courses/<int:id>")
 @login_required
 @professor_required
 def course_detail(id: int):
-    course = Course.query.get_or_404(id)
-    if course.professor.user_id != current_user.id:
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
         from flask import abort
         abort(403)
 
-    from sqlalchemy import func
-    sc = Grade.query.filter_by(course_id=course.id).count()
+    sc = Grade.query.filter_by(enseignement_id=ens.id).count()
     avg = (
         db.session.query(func.avg(Grade.grade))
-        .filter_by(course_id=course.id)
+        .filter_by(enseignement_id=ens.id)
         .filter(Grade.grade.isnot(None))
         .scalar()
     )
     given = (
-        Grade.query.filter_by(course_id=course.id)
+        Grade.query.filter_by(enseignement_id=ens.id)
         .filter(Grade.grade.isnot(None))
         .count()
     )
@@ -188,7 +145,7 @@ def course_detail(id: int):
         db.session.query(Grade, Student, User)
         .join(Student, Grade.student_id == Student.id)
         .join(User, Student.user_id == User.id)
-        .filter(Grade.course_id == course.id)
+        .filter(Grade.enseignement_id == ens.id)
         .order_by(User.username)
         .all()
     )
@@ -203,7 +160,7 @@ def course_detail(id: int):
         for g, s, u in rows
     ]
     return render_template(
-        "professor/course_detail.html", course=course, stats=stats, students=students
+        "professor/course_detail.html", course=ens, stats=stats, students=students
     )
 
 
@@ -213,8 +170,8 @@ def course_detail(id: int):
 @login_required
 @professor_required
 def course_grades(id: int):
-    course = Course.query.get_or_404(id)
-    if course.professor.user_id != current_user.id:
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
         from flask import abort
         abort(403)
 
@@ -222,7 +179,7 @@ def course_grades(id: int):
         db.session.query(Grade, Student, User)
         .join(Student, Grade.student_id == Student.id)
         .join(User, Student.user_id == User.id)
-        .filter(Grade.course_id == course.id)
+        .filter(Grade.enseignement_id == ens.id)
         .order_by(User.username)
         .all()
     )
@@ -239,7 +196,7 @@ def course_grades(id: int):
     graded_count = sum(1 for s in students if s["current_grade"] is not None)
     return render_template(
         "professor/course_grades.html",
-        course=course, students=students, graded_count=graded_count,
+        course=ens, students=students, graded_count=graded_count,
     )
 
 
@@ -247,8 +204,8 @@ def course_grades(id: int):
 @login_required
 @professor_required
 def course_grades_save(id: int):
-    course = Course.query.get_or_404(id)
-    if course.professor.user_id != current_user.id:
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
         from flask import abort
         abort(403)
 
@@ -260,12 +217,12 @@ def course_grades_save(id: int):
             student_id = int(key.split("_")[1])
             grade_value = float(value) if value.strip() else None
             if grade_value is not None and not (0 <= grade_value <= 20):
-                continue  # Ignorer valeurs hors plage
+                continue
         except (ValueError, IndexError):
             continue
 
         grade_entry = Grade.query.filter_by(
-            student_id=student_id, course_id=course.id
+            student_id=student_id, enseignement_id=ens.id
         ).first()
         if grade_entry:
             grade_entry.grade = grade_value
@@ -274,9 +231,183 @@ def course_grades_save(id: int):
             updated += 1
 
     db.session.commit()
-    log_audit("grades_save", resource_type="course", resource_id=course.id)
+    log_audit("grades_save", resource_type="enseignement", resource_id=ens.id)
     flash(f"{updated} note(s) enregistrée(s).", "success")
-    return redirect(url_for("professor.course_grades", id=course.id))
+    return redirect(url_for("professor.course_grades", id=ens.id))
+
+
+# ─── ATTENDANCE (appel) ─────────────────────────────────────────────────────
+
+@professor_bp.route("/attendance")
+@login_required
+@professor_required
+def attendance_list():
+    """Liste des enseignements du prof pour faire l'appel."""
+    prof = current_user.professor_profile
+    if not prof:
+        return redirect(url_for("professor.dashboard"))
+
+    course_list = []
+    for e in prof.enseignements.join(Matiere).order_by(Matiere.name).all():
+        sc = Grade.query.filter_by(enseignement_id=e.id).count()
+        course_list.append({
+            "id": e.id, "name": e.name, "code": e.code,
+            "class_name": e.class_name, "student_count": sc,
+        })
+    return render_template("professor/attendance_list.html", courses=course_list)
+
+
+@professor_bp.route("/attendance/<int:id>")
+@login_required
+@professor_required
+def attendance_call(id: int):
+    """Page d'appel pour un enseignement donné, à une date donnée."""
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
+        from flask import abort
+        abort(403)
+
+    # Date : par défaut aujourd'hui, sinon paramètre GET
+    date_str = request.args.get("date")
+    if date_str:
+        try:
+            selected_date = date.fromisoformat(date_str)
+        except ValueError:
+            selected_date = date.today()
+    else:
+        selected_date = date.today()
+
+    # Récupérer les étudiants inscrits (via Grade)
+    rows = (
+        db.session.query(Student, User)
+        .join(User, Student.user_id == User.id)
+        .join(Grade, Grade.student_id == Student.id)
+        .filter(Grade.enseignement_id == ens.id)
+        .order_by(User.username)
+        .all()
+    )
+
+    # Récupérer les présences déjà enregistrées pour cette date
+    existing = {
+        a.student_id: a.status
+        for a in Attendance.query.filter_by(
+            enseignement_id=ens.id, date=selected_date
+        ).all()
+    }
+
+    students = []
+    for s, u in rows:
+        students.append({
+            "student_id": s.id,
+            "username": u.username,
+            "student_number": s.student_number,
+            "status": existing.get(s.id, "present"),
+        })
+
+    already_saved = len(existing) > 0
+
+    return render_template(
+        "professor/attendance_call.html",
+        course=ens, students=students,
+        selected_date=selected_date, already_saved=already_saved,
+    )
+
+
+@professor_bp.route("/attendance/<int:id>/save", methods=["POST"])
+@login_required
+@professor_required
+def attendance_save(id: int):
+    """Enregistre l'appel pour un enseignement à une date."""
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
+        from flask import abort
+        abort(403)
+
+    date_str = request.form.get("date")
+    try:
+        selected_date = date.fromisoformat(date_str)
+    except (ValueError, TypeError):
+        flash("Date invalide.", "danger")
+        return redirect(url_for("professor.attendance_call", id=ens.id))
+
+    # Récupérer les étudiants inscrits
+    enrolled = (
+        db.session.query(Student.id)
+        .join(Grade, Grade.student_id == Student.id)
+        .filter(Grade.enseignement_id == ens.id)
+        .all()
+    )
+    enrolled_ids = {row[0] for row in enrolled}
+
+    updated = 0
+    for student_id in enrolled_ids:
+        status = request.form.get(f"status_{student_id}", "present")
+        if status not in ("present", "absent", "late"):
+            status = "present"
+
+        att = Attendance.query.filter_by(
+            student_id=student_id, enseignement_id=ens.id, date=selected_date
+        ).first()
+
+        if att:
+            att.status = status
+            att.recorded_by = current_user.id
+            att.recorded_at = datetime.utcnow()
+        else:
+            att = Attendance(
+                student_id=student_id,
+                enseignement_id=ens.id,
+                date=selected_date,
+                status=status,
+                recorded_by=current_user.id,
+            )
+            db.session.add(att)
+        updated += 1
+
+    db.session.commit()
+    log_audit("attendance_save", resource_type="enseignement", resource_id=ens.id)
+    flash(f"Appel enregistré pour {updated} étudiant(s).", "success")
+    return redirect(url_for("professor.attendance_call", id=ens.id, date=selected_date.isoformat()))
+
+
+@professor_bp.route("/attendance/<int:id>/history")
+@login_required
+@professor_required
+def attendance_history(id: int):
+    """Historique des appels pour un enseignement."""
+    ens = Enseignement.query.get_or_404(id)
+    if ens.professor.user_id != current_user.id:
+        from flask import abort
+        abort(403)
+
+    # Dates distinctes d'appels effectués
+    dates = (
+        db.session.query(Attendance.date)
+        .filter_by(enseignement_id=ens.id)
+        .distinct()
+        .order_by(desc(Attendance.date))
+        .all()
+    )
+
+    history = []
+    for (d,) in dates:
+        records = Attendance.query.filter_by(enseignement_id=ens.id, date=d).all()
+        total = len(records)
+        absents = sum(1 for r in records if r.status == "absent")
+        lates = sum(1 for r in records if r.status == "late")
+        presents = total - absents - lates
+        history.append({
+            "date": d,
+            "total": total,
+            "presents": presents,
+            "absents": absents,
+            "lates": lates,
+        })
+
+    return render_template(
+        "professor/attendance_history.html",
+        course=ens, history=history,
+    )
 
 
 # ─── PROFILE ─────────────────────────────────────────────────────────────────

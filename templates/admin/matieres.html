@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Matières{% endblock %}
+{% block page_title %}Gestion des matières{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2>Matières ({{ matieres|length }})</h2>
+  <a href="{{ url_for('admin.matiere_create') }}" class="btn btn-primary">+ Nouvelle matière</a>
+</div>
+
+{% if matieres %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Intitulé</th>
+        <th>Crédits</th>
+        <th>Enseignements</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in matieres %}
+      <tr>
+        <td><span class="badge">{{ item.matiere.code }}</span></td>
+        <td><strong>{{ item.matiere.name }}</strong></td>
+        <td>{{ item.matiere.credits }} ECTS</td>
+        <td><span class="badge badge-blue">{{ item.enseignement_count }}</span></td>
+        <td style="display:flex; gap:6px;">
+          <a href="{{ url_for('admin.matiere_edit', id=item.matiere.id) }}" class="btn btn-sm btn-secondary">Modifier</a>
+          <form method="POST" action="{{ url_for('admin.matiere_delete', id=item.matiere.id) }}"
+                onsubmit="return confirm('Supprimer cette matière ?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="padding:40px; text-align:center; color:var(--text-dim);">
+  Aucune matière. Commencez par en créer une.
+</div>
+{% endif %}
+{% endblock %}

@@ -36,9 +36,9 @@ services:
       FLASK_ENV: production
       DATABASE_URL: mysql+pymysql://academique:academique@db:3306/academique
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-long-random-string}
+      FERNET_KEY: ${FERNET_KEY:-I5zvDebYSGLzHt-oWiBOL21govf9UQQa4huvQ8iMs78=}
       SESSION_COOKIE_SECURE: "false"
       SESSION_LIFETIME_MINUTES: "30"
-      FERNET_KEY: ${FERNET_KEY:-change-me-to-fernet-key}
     ports:
       - "5000:5000"
     networks:

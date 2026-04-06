@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Enseignements{% endblock %}
+{% block page_title %}Gestion des enseignements{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2>Enseignements ({{ enseignements|length }})</h2>
+  <a href="{{ url_for('admin.enseignement_create') }}" class="btn btn-primary">+ Nouvel enseignement</a>
+</div>
+
+<p style="color:var(--text-dim); margin-bottom:16px;">
+  Un enseignement associe une matière, une classe et un professeur.
+</p>
+
+{% if enseignements %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Classe</th>
+        <th>Matière</th>
+        <th>Code</th>
+        <th>Crédits</th>
+        <th>Professeur</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ens, mat, cls, prof, u in enseignements %}
+      <tr>
+        <td><span class="badge badge-blue">{{ cls.name }}</span></td>
+        <td><strong>{{ mat.name }}</strong></td>
+        <td>{{ mat.code }}</td>
+        <td>{{ mat.credits }} ECTS</td>
+        <td>{{ u.username }}</td>
+        <td style="display:flex; gap:6px;">
+          <a href="{{ url_for('admin.enseignement_edit', id=ens.id) }}" class="btn btn-sm btn-secondary">Modifier</a>
+          <form method="POST" action="{{ url_for('admin.enseignement_delete', id=ens.id) }}"
+                onsubmit="return confirm('Supprimer cet enseignement ?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="padding:40px; text-align:center; color:var(--text-dim);">
+  Aucun enseignement. Créez d'abord des classes et des matières, puis associez-les ici.
+</div>
+{% endif %}
+{% endblock %}

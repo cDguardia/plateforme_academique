@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from cryptography.fernet import Fernet, InvalidToken
 from flask import request
@@ -23,21 +23,29 @@ class EncryptedType(db.TypeDecorator):
 
     def __init__(self, key=None):
         super().__init__()
-        self.key = key or os.environ.get("FERNET_KEY")
-        if not self.key:
+        self.key = key  # Peut être None, sera résolu plus tard
+
+    def _get_fernet(self):
+        """Obtient l'instance Fernet, en chargeant la clé si nécessaire."""
+        key = self.key or os.environ.get("FERNET_KEY")
+        if not key:
             raise ValueError("FERNET_KEY must be set")
-        self.fernet = Fernet(self.key.encode())
+        if isinstance(key, str):
+            key = key.encode()
+        return Fernet(key)
 
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
-        return self.fernet.encrypt(value.encode()).decode()
+        fernet = self._get_fernet()
+        return fernet.encrypt(value.encode()).decode()
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
         try:
-            return self.fernet.decrypt(value.encode()).decode()
+            fernet = self._get_fernet()
+            return fernet.decrypt(value.encode()).decode()
         except InvalidToken:
             return None  # Données corrompues
 
@@ -55,6 +63,10 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # Account lockout (côté serveur)
+    failed_login_attempts = db.Column(db.Integer, default=0, nullable=False)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
     # 2FA TOTP
     totp_secret = db.Column(db.String(256), nullable=True)
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
@@ -71,21 +83,20 @@ class User(UserMixin, db.Model):
 
     def set_totp_secret(self, secret: str) -> None:
         fernet = self._get_fernet()
-        if fernet:
-            self.totp_secret = fernet.encrypt(secret.encode()).decode()
-        else:
-            self.totp_secret = secret
+        if not fernet:
+            raise ValueError("FERNET_KEY is required to encrypt TOTP secrets")
+        self.totp_secret = fernet.encrypt(secret.encode()).decode()
 
     def get_totp_secret(self) -> str | None:
         if not self.totp_secret:
             return None
         fernet = self._get_fernet()
-        if fernet:
-            try:
-                return fernet.decrypt(self.totp_secret.encode()).decode()
-            except InvalidToken:
-                return None
-        return self.totp_secret
+        if not fernet:
+            raise ValueError("FERNET_KEY is required to decrypt TOTP secrets")
+        try:
+            return fernet.decrypt(self.totp_secret.encode()).decode()
+        except InvalidToken:
+            return None
 
     def generate_backup_codes(self) -> list[str]:
         """Génère 10 codes de récupération."""
@@ -135,6 +146,23 @@ class User(UserMixin, db.Model):
         return f"<User {self.username} ({self.role})>"
 
 
+# ─── CLASSE ─────────────────────────────────────────────────────────────────
+
+class Classe(db.Model):
+    __tablename__ = "classes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    students = db.relationship("Student", back_populates="classe", lazy="dynamic")
+    enseignements = db.relationship("Enseignement", back_populates="classe", lazy="dynamic", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<Classe {self.name}>"
+
+
 # ─── PROFESSOR ───────────────────────────────────────────────────────────────
 
 class Professor(db.Model):
@@ -149,7 +177,7 @@ class Professor(db.Model):
     specialization = db.Column(db.String(200), nullable=True)
 
     user = db.relationship("User", back_populates="professor_profile")
-    courses = db.relationship("Course", back_populates="professor", lazy="dynamic")
+    enseignements = db.relationship("Enseignement", back_populates="professor", lazy="dynamic")
 
     def __repr__(self) -> str:
         return f"<Professor user_id={self.user_id}>"
@@ -166,39 +194,92 @@ class Student(db.Model):
         unique=True, nullable=False
     )
     student_number = db.Column(EncryptedType, nullable=True)
-    class_name = db.Column(db.String(50), nullable=True)
+    classe_id = db.Column(
+        db.Integer, db.ForeignKey("classes.id", ondelete="SET NULL"), nullable=True
+    )
 
     user = db.relationship("User", back_populates="student_profile")
+    classe = db.relationship("Classe", back_populates="students")
     grades = db.relationship(
         "Grade", back_populates="student", lazy="dynamic", cascade="all, delete-orphan"
     )
+
+    @property
+    def class_name(self) -> str | None:
+        return self.classe.name if self.classe else None
 
     def __repr__(self) -> str:
         return f"<Student {self.student_number}>"
 
 
-# ─── COURSE ──────────────────────────────────────────────────────────────────
+# ─── MATIERE ────────────────────────────────────────────────────────────────
 
-class Course(db.Model):
-    __tablename__ = "courses"
+class Matiere(db.Model):
+    __tablename__ = "matieres"
 
     id = db.Column(db.Integer, primary_key=True)
-    professor_id = db.Column(
-        db.Integer, db.ForeignKey("professors.id", ondelete="CASCADE"), nullable=False
-    )
     name = db.Column(db.String(200), nullable=False)
     code = db.Column(db.String(20), unique=True, nullable=False)
-    class_name = db.Column(db.String(50), nullable=False)
     credits = db.Column(db.Integer, default=3, nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    professor = db.relationship("Professor", back_populates="courses")
-    grades = db.relationship(
-        "Grade", back_populates="course", lazy="dynamic", cascade="all, delete-orphan"
-    )
+    enseignements = db.relationship("Enseignement", back_populates="matiere", lazy="dynamic", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
-        return f"<Course {self.code}>"
+        return f"<Matiere {self.code}>"
+
+
+# ─── ENSEIGNEMENT (Matiere + Classe + Professor) ────────────────────────────
+
+class Enseignement(db.Model):
+    __tablename__ = "enseignements"
+    __table_args__ = (
+        db.UniqueConstraint("matiere_id", "classe_id", name="uq_matiere_classe"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    matiere_id = db.Column(
+        db.Integer, db.ForeignKey("matieres.id", ondelete="CASCADE"), nullable=False
+    )
+    classe_id = db.Column(
+        db.Integer, db.ForeignKey("classes.id", ondelete="CASCADE"), nullable=False
+    )
+    professor_id = db.Column(
+        db.Integer, db.ForeignKey("professors.id", ondelete="CASCADE"), nullable=False
+    )
+
+    matiere = db.relationship("Matiere", back_populates="enseignements")
+    classe = db.relationship("Classe", back_populates="enseignements")
+    professor = db.relationship("Professor", back_populates="enseignements")
+    grades = db.relationship(
+        "Grade", back_populates="enseignement", lazy="dynamic", cascade="all, delete-orphan"
+    )
+    schedules = db.relationship(
+        "Schedule", back_populates="enseignement", lazy="dynamic", cascade="all, delete-orphan"
+    )
+
+    @property
+    def name(self) -> str:
+        return self.matiere.name
+
+    @property
+    def code(self) -> str:
+        return self.matiere.code
+
+    @property
+    def credits(self) -> int:
+        return self.matiere.credits
+
+    @property
+    def description(self) -> str | None:
+        return self.matiere.description
+
+    @property
+    def class_name(self) -> str:
+        return self.classe.name
+
+    def __repr__(self) -> str:
+        return f"<Enseignement {self.matiere.code} → {self.classe.name}>"
 
 
 # ─── GRADE (sert aussi d'inscription) ────────────────────────────────────────
@@ -208,15 +289,15 @@ class Course(db.Model):
 class Grade(db.Model):
     __tablename__ = "grades"
     __table_args__ = (
-        db.UniqueConstraint("student_id", "course_id", name="uq_student_course"),
+        db.UniqueConstraint("student_id", "enseignement_id", name="uq_student_enseignement"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(
         db.Integer, db.ForeignKey("students.id", ondelete="CASCADE"), nullable=False
     )
-    course_id = db.Column(
-        db.Integer, db.ForeignKey("courses.id", ondelete="CASCADE"), nullable=False
+    enseignement_id = db.Column(
+        db.Integer, db.ForeignKey("enseignements.id", ondelete="CASCADE"), nullable=False
     )
     grade = db.Column(db.Numeric(4, 2), nullable=True)  # NULL = inscrit non noté
     graded_by = db.Column(
@@ -225,11 +306,11 @@ class Grade(db.Model):
     graded_at = db.Column(db.DateTime, nullable=True)
 
     student = db.relationship("Student", back_populates="grades")
-    course = db.relationship("Course", back_populates="grades")
+    enseignement = db.relationship("Enseignement", back_populates="grades")
     grader = db.relationship("User", foreign_keys=[graded_by])
 
     def __repr__(self) -> str:
-        return f"<Grade student={self.student_id} course={self.course_id} grade={self.grade}>"
+        return f"<Grade student={self.student_id} enseignement={self.enseignement_id} grade={self.grade}>"
 
 
 # ─── AUDIT LOG ───────────────────────────────────────────────────────────────
@@ -316,19 +397,47 @@ class Message(db.Model):
 
 # ─── SCHEDULE ────────────────────────────────────────────────────────────────
 
+class Attendance(db.Model):
+    __tablename__ = "attendances"
+    __table_args__ = (
+        db.UniqueConstraint("student_id", "enseignement_id", "date", name="uq_attendance_student_ens_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(
+        db.Integer, db.ForeignKey("students.id", ondelete="CASCADE"), nullable=False
+    )
+    enseignement_id = db.Column(
+        db.Integer, db.ForeignKey("enseignements.id", ondelete="CASCADE"), nullable=False
+    )
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(10), nullable=False, default="present")  # present, absent, late
+    recorded_by = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    recorded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    student = db.relationship("Student", backref=db.backref("attendances", lazy="dynamic"))
+    enseignement = db.relationship("Enseignement", backref=db.backref("attendances", lazy="dynamic"))
+    recorder = db.relationship("User", foreign_keys=[recorded_by])
+
+    def __repr__(self) -> str:
+        return f"<Attendance student={self.student_id} ens={self.enseignement_id} date={self.date} status={self.status}>"
+
+
 class Schedule(db.Model):
     __tablename__ = "schedules"
 
     id = db.Column(db.Integer, primary_key=True)
-    course_id = db.Column(
-        db.Integer, db.ForeignKey("courses.id", ondelete="CASCADE"), nullable=False
+    enseignement_id = db.Column(
+        db.Integer, db.ForeignKey("enseignements.id", ondelete="CASCADE"), nullable=False
     )
     day_of_week = db.Column(db.Integer, nullable=False)   # 0=Lun … 6=Dim
     start_time = db.Column(db.String(5), nullable=False)  # "HH:MM"
     end_time = db.Column(db.String(5), nullable=False)    # "HH:MM"
     room = db.Column(db.String(50), nullable=True)
 
-    course = db.relationship("Course")
+    enseignement = db.relationship("Enseignement", back_populates="schedules")
 
     DAY_NAMES = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
@@ -337,7 +446,7 @@ class Schedule(db.Model):
         return self.DAY_NAMES[self.day_of_week]
 
     def __repr__(self) -> str:
-        return f"<Schedule course={self.course_id} day={self.day_of_week} {self.start_time}-{self.end_time}>"
+        return f"<Schedule enseignement={self.enseignement_id} day={self.day_of_week} {self.start_time}-{self.end_time}>"
 
 
 # ─── HELPER ──────────────────────────────────────────────────────────────────

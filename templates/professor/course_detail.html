@@ -28,7 +28,6 @@
         {% endif %}
       </div>
       <div style="display:flex; gap:8px;">
-        <a href="{{ url_for('professor.course_edit', id=course.id) }}" class="btn btn-outline">✏️ Modifier</a>
         <a href="{{ url_for('professor.course_grades', id=course.id) }}" class="btn btn-primary">📝 Gérer les notes</a>
       </div>
     </div>

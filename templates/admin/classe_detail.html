@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Classe {{ classe.name }}{% endblock %}
+{% block page_title %}Classe {{ classe.name }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:10px; color:var(--text-dim);">
+  {{ classe.description or '' }}
+</div>
+
+<!-- ── Etudiants ── -->
+<div class="card" style="margin-bottom:24px;">
+  <h3 style="margin-bottom:16px;">Etudiants ({{ students|length }})</h3>
+
+  {% if unassigned %}
+  <form method="POST" action="{{ url_for('admin.classe_add_student', id=classe.id) }}"
+        style="display:flex; gap:10px; margin-bottom:16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <select name="student_id" class="form-input" style="flex:1;">
+      {% for s, u in unassigned %}
+      <option value="{{ s.id }}">{{ u.username }} ({{ s.student_number or 'N/A' }})</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Ajouter</button>
+  </form>
+  {% endif %}
+
+  {% if students %}
+  <table class="table">
+    <thead>
+      <tr><th>Nom</th><th>N° étudiant</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for s, u in students %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ s.student_number or '—' }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.classe_remove_student', id=classe.id, student_id=s.id) }}"
+                onsubmit="return confirm('Retirer cet étudiant ?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Retirer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-dim);">Aucun étudiant dans cette classe.</p>
+  {% endif %}
+</div>
+
+<!-- ── Enseignements ── -->
+<div class="card">
+  <h3 style="margin-bottom:16px;">Enseignements ({{ enseignements|length }})</h3>
+
+  {% if enseignements %}
+  <table class="table">
+    <thead>
+      <tr><th>Matière</th><th>Code</th><th>Crédits</th><th>Professeur</th></tr>
+    </thead>
+    <tbody>
+      {% for ens, mat, prof, u in enseignements %}
+      <tr>
+        <td>{{ mat.name }}</td>
+        <td><span class="badge">{{ mat.code }}</span></td>
+        <td>{{ mat.credits }} ECTS</td>
+        <td>{{ u.username }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-dim);">Aucun enseignement.
+    <a href="{{ url_for('admin.enseignement_create') }}">Créer un enseignement</a>
+  </p>
+  {% endif %}
+</div>
+
+<div style="margin-top:20px;">
+  <a href="{{ url_for('admin.classes') }}" class="btn btn-secondary">Retour aux classes</a>
+</div>
+{% endblock %}

@@ -1,13 +1,98 @@
+# ─── Environnements virtuels ──────────────────────────────────────────────
 .env
+.env.local
+.env.production
+.env.staging
+venv/
+.venv/
+env/
+ENV/
+
+# ─── Python ────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-venv/
-.venv/
-instance/
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ─── Tests ──────────────────────────────────────────────────────────────────
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+tests/__pycache__/
+tests/*.pyc
+test_*.py
+*_test.py
+conftest.py
+
+# ─── Logs et fichiers temporaires ────────────────────────────────────────────
+*.log
+logs/
+*.tmp
+*.temp
+debug_*.txt
+*.bak
+*.swp
+*.swo
+*~
+
+# ─── IDE et éditeurs ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ─── Base de données ─────────────────────────────────────────────────────────
 *.db
 *.sqlite3
-.DS_Store
+instance/
+app.db
+backup_db.py
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+.dockerignore
+
+# ─── Sécurité ────────────────────────────────────────────────────────────────
+secrets/
+keys/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# ─── Documentation temporaire ────────────────────────────────────────────────
+*.md.bak
+README.tmp
 .claude/
-Nouveau dossier/
-*.txt.bak

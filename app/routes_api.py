@@ -23,8 +23,8 @@ def api_login():
     if not user or not user.check_password(data["password"]):
         return jsonify({"error": "Identifiants invalides"}), 401
 
-    if user.is_locked:
-        return jsonify({"error": "Compte verrouillé"}), 423
+    if not user.is_active:
+        return jsonify({"error": "Compte désactivé"}), 423
 
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
@@ -35,7 +35,7 @@ def api_login():
         "user": {
             "id": user.id,
             "username": user.username,
-            "role": user.role.value
+            "role": user.role,
         }
     }), 200
 
@@ -48,31 +48,37 @@ def api_refresh():
     return jsonify({"access_token": access_token}), 200
 
 
-# ─── COURSES ─────────────────────────────────────────────────────────────────
+# ─── COURSES (enseignements) ────────────────────────────────────────────────
 
 @api_bp.route("/courses", methods=["GET"])
 @jwt_required()
 def api_courses():
-    from app.models import Course
-    courses = Course.query.all()
+    from app.models import Enseignement
+    ens_list = Enseignement.query.all()
     return jsonify([{
-        "id": c.id,
-        "title": c.title,
-        "description": c.description,
-        "professor": c.professor.user.username if c.professor else None
-    } for c in courses]), 200
+        "id": e.id,
+        "name": e.name,
+        "code": e.code,
+        "class_name": e.class_name,
+        "credits": e.credits,
+        "description": e.description,
+        "professor": e.professor.user.username,
+    } for e in ens_list]), 200
 
 
-@api_bp.route("/courses/<int:course_id>", methods=["GET"])
+@api_bp.route("/courses/<int:id>", methods=["GET"])
 @jwt_required()
-def api_course_detail(course_id):
-    from app.models import Course
-    course = Course.query.get_or_404(course_id)
+def api_course_detail(id):
+    from app.models import Enseignement
+    ens = Enseignement.query.get_or_404(id)
     return jsonify({
-        "id": course.id,
-        "title": course.title,
-        "description": course.description,
-        "professor": course.professor.user.username if course.professor else None
+        "id": ens.id,
+        "name": ens.name,
+        "code": ens.code,
+        "class_name": ens.class_name,
+        "credits": ens.credits,
+        "description": ens.description,
+        "professor": ens.professor.user.username,
     }), 200
 
 
@@ -80,15 +86,18 @@ def api_course_detail(course_id):
 
 @api_bp.route("/grades", methods=["GET"])
 @jwt_required()
-@student_required
 def api_grades():
-    from app.models import Grade
+    from app.models import Grade, Student
     current_user_id = get_jwt_identity()
-    grades = Grade.query.filter_by(student_id=current_user_id).all()
+    # Récupérer le profil étudiant à partir du user_id (pas le même que student_id)
+    student = Student.query.filter_by(user_id=current_user_id).first()
+    if not student:
+        return jsonify({"error": "Profil étudiant introuvable"}), 403
+    grades = Grade.query.filter_by(student_id=student.id).all()
     return jsonify([{
-        "course": g.course.title,
-        "grade": g.grade,
-        "date": g.created_at.isoformat() if g.created_at else None
+        "course": g.enseignement.name,
+        "grade": float(g.grade) if g.grade else None,
+        "graded_at": g.graded_at.isoformat() if g.graded_at else None,
     } for g in grades]), 200
 
 
@@ -103,6 +112,6 @@ def api_users():
         "id": u.id,
         "username": u.username,
         "email": u.email,
-        "role": u.role.value,
-        "is_locked": u.is_locked
+        "role": u.role,
+        "is_active": u.is_active,
     } for u in users]), 200

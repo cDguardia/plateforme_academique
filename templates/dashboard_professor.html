@@ -43,10 +43,7 @@
   <div class="card">
     <div class="card-header">
       <div class="card-title">📚 Mes cours</div>
-      <div class="flex-row gap-8">
-        <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary btn-sm">+ Nouveau cours</a>
-        <a href="{{ url_for('professor.courses') }}" class="btn btn-outline btn-sm">Tous</a>
-      </div>
+      <a href="{{ url_for('professor.courses') }}" class="btn btn-outline btn-sm">Voir tous</a>
     </div>
     {% if my_courses %}
     <div class="table-wrap">
@@ -80,8 +77,8 @@
     {% else %}
     <div class="empty-state">
       <div class="icon">📚</div>
-      <p>Vous n'avez pas encore de cours.</p>
-      <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary" style="margin-top:12px;">Créer un cours</a>
+      <p>Aucun enseignement ne vous a été attribué.</p>
+      <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Contactez l'administration.</p>
     </div>
     {% endif %}
   </div>

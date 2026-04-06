@@ -6,7 +6,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.forms import MessageForm
-from app.models import Course, Grade, Message, Professor, Student, User, log_audit
+from app.models import Enseignement, Grade, Message, Professor, Student, User, log_audit
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/messages")
 
@@ -19,11 +19,11 @@ def _get_allowed_contacts() -> list[User]:
         student = current_user.student_profile
         if not student:
             return []
-        # Profs des cours auxquels l'étudiant est inscrit
+        # Profs des enseignements auxquels l'étudiant est inscrit
         prof_ids = (
             db.session.query(Professor.user_id)
-            .join(Course, Course.professor_id == Professor.id)
-            .join(Grade, Grade.course_id == Course.id)
+            .join(Enseignement, Enseignement.professor_id == Professor.id)
+            .join(Grade, Grade.enseignement_id == Enseignement.id)
             .filter(Grade.student_id == student.id)
             .distinct()
             .all()
@@ -35,12 +35,12 @@ def _get_allowed_contacts() -> list[User]:
         prof = current_user.professor_profile
         if not prof:
             return []
-        # Étudiants inscrits dans ses cours
+        # Étudiants inscrits dans ses enseignements
         student_user_ids = (
             db.session.query(Student.user_id)
             .join(Grade, Grade.student_id == Student.id)
-            .join(Course, Grade.course_id == Course.id)
-            .filter(Course.professor_id == prof.id)
+            .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+            .filter(Enseignement.professor_id == prof.id)
             .distinct()
             .all()
         )

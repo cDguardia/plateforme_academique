@@ -9,9 +9,7 @@
   <div style="font-size:13px; color:var(--text-dim);">
     {{ courses|length }} cours au total
   </div>
-  <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary">
-    ➕ Nouveau cours
-  </a>
+  <span style="font-size:12px; color:var(--text-muted);">Les cours sont gérés par l'administration</span>
 </div>
 
 {% if courses %}
@@ -54,8 +52,6 @@
            class="btn btn-outline btn-sm" style="flex:1; justify-content:center;">👁 Détail</a>
         <a href="{{ url_for('professor.course_grades', id=course.id) }}"
            class="btn btn-primary btn-sm" style="flex:1; justify-content:center;">📝 Notes</a>
-        <a href="{{ url_for('professor.course_edit', id=course.id) }}"
-           class="btn btn-outline btn-sm btn-icon">✏️</a>
       </div>
     </div>
   </div>
@@ -66,8 +62,8 @@
 <div class="card">
   <div class="empty-state" style="padding:64px 20px;">
     <div class="icon">📚</div>
-    <p style="margin-bottom:16px;">Vous n'avez pas encore créé de cours.</p>
-    <a href="{{ url_for('professor.course_create') }}" class="btn btn-primary">Créer mon premier cours</a>
+    <p style="margin-bottom:16px;">Aucun enseignement ne vous a encore été attribué.</p>
+    <p style="font-size:12px; color:var(--text-muted);">Contactez l'administration pour l'attribution de vos cours.</p>
   </div>
 </div>
 {% endif %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Classes{% endblock %}
+{% block page_title %}Gestion des classes{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2>Classes ({{ classes|length }})</h2>
+  <a href="{{ url_for('admin.classe_create') }}" class="btn btn-primary">+ Nouvelle classe</a>
+</div>
+
+{% if classes %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Description</th>
+        <th>Etudiants</th>
+        <th>Enseignements</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in classes %}
+      <tr>
+        <td><strong>{{ item.classe.name }}</strong></td>
+        <td>{{ item.classe.description or '—' }}</td>
+        <td><span class="badge badge-blue">{{ item.student_count }}</span></td>
+        <td><span class="badge badge-green">{{ item.enseignement_count }}</span></td>
+        <td style="display:flex; gap:6px;">
+          <a href="{{ url_for('admin.classe_detail', id=item.classe.id) }}" class="btn btn-sm btn-secondary">Voir</a>
+          <a href="{{ url_for('admin.classe_edit', id=item.classe.id) }}" class="btn btn-sm btn-secondary">Modifier</a>
+          <form method="POST" action="{{ url_for('admin.classe_delete', id=item.classe.id) }}"
+                onsubmit="return confirm('Supprimer cette classe ?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="padding:40px; text-align:center; color:var(--text-dim);">
+  Aucune classe. Commencez par en créer une.
+</div>
+{% endif %}
+{% endblock %}

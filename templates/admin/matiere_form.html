@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if matiere else 'Nouvelle' }} matière{% endblock %}
+{% block page_title %}{{ 'Modifier ' + matiere.name if matiere else 'Nouvelle matière' }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+      <label>{{ form.name.label.text }}</label>
+      {{ form.name(class="form-input", placeholder="Ex: Cryptographie appliquée") }}
+      {% for e in form.name.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label>{{ form.code.label.text }}</label>
+      {{ form.code(class="form-input", placeholder="Ex: CRYPTO-101") }}
+      {% for e in form.code.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label>{{ form.credits.label.text }}</label>
+      {{ form.credits(class="form-input", value=form.credits.data or 3) }}
+      {% for e in form.credits.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label>{{ form.description.label.text }}</label>
+      {{ form.description(class="form-input", rows=3) }}
+      {% for e in form.description.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button type="submit" class="btn btn-primary">{{ 'Modifier' if matiere else 'Créer' }}</button>
+      <a href="{{ url_for('admin.matieres') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

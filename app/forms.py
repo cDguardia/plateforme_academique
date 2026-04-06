@@ -47,7 +47,7 @@ class RegisterForm(FlaskForm):
     )
     role = SelectField(
         "Rôle",
-        choices=[("student", "Étudiant"), ("professor", "Professeur")],
+        choices=[("student", "Étudiant")],
         validators=[DataRequired()],
     )
     password = PasswordField(
@@ -60,8 +60,8 @@ class RegisterForm(FlaskForm):
     )
 
     def validate_role(self, field) -> None:  # noqa: ANN001
-        if field.data not in ("student", "professor"):
-            raise ValidationError("Rôle invalide.")
+        if field.data not in ("student",):
+            raise ValidationError("Seul le rôle étudiant est disponible à l'inscription.")
 
     def validate_username(self, field) -> None:  # noqa: ANN001
         if User.query.filter_by(username=field.data.strip()).first():
@@ -124,14 +124,28 @@ class UserEditForm(FlaskForm):
     is_active = BooleanField("Compte actif")
 
 
-# ─── COURSE FORMS ────────────────────────────────────────────────────────────
+# ─── CLASSE FORMS ────────────────────────────────────────────────────────────
 
-class CourseForm(FlaskForm):
-    name = StringField("Intitulé du cours", validators=[DataRequired(), Length(max=200)])
+class ClasseForm(FlaskForm):
+    name = StringField("Nom de la classe", validators=[DataRequired(), Length(max=50)])
+    description = StringField("Description", validators=[Optional(), Length(max=200)])
+
+
+# ─── MATIERE FORMS ───────────────────────────────────────────────────────────
+
+class MatiereForm(FlaskForm):
+    name = StringField("Intitulé de la matière", validators=[DataRequired(), Length(max=200)])
     code = StringField("Code", validators=[DataRequired(), Length(max=20)])
-    class_name = StringField("Classe cible", validators=[DataRequired(), Length(max=50)])
     credits = IntegerField("Crédits ECTS", validators=[DataRequired(), NumberRange(min=1, max=30)])
     description = TextAreaField("Description", validators=[Optional(), Length(max=2000)])
+
+
+# ─── ENSEIGNEMENT FORMS ──────────────────────────────────────────────────────
+
+class EnseignementForm(FlaskForm):
+    matiere_id = SelectField("Matière", coerce=int, validators=[DataRequired()])
+    classe_id = SelectField("Classe", coerce=int, validators=[DataRequired()])
+    professor_id = SelectField("Professeur", coerce=int, validators=[DataRequired()])
 
 
 # ─── PROFILE FORMS ───────────────────────────────────────────────────────────
@@ -172,7 +186,7 @@ class MessageForm(FlaskForm):
 # ─── SCHEDULE FORMS ──────────────────────────────────────────────────────────
 
 class ScheduleForm(FlaskForm):
-    course_id = SelectField("Cours", coerce=int, validators=[DataRequired()])
+    enseignement_id = SelectField("Enseignement", coerce=int, validators=[DataRequired()])
     day_of_week = SelectField(
         "Jour",
         choices=[(0, "Lundi"), (1, "Mardi"), (2, "Mercredi"),

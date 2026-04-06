@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.forms import ScheduleForm
-from app.models import Course, Grade, Schedule, log_audit
+from app.models import Enseignement, Grade, Matiere, Schedule, log_audit
 from app.rbac import admin_required
 
 schedule_bp = Blueprint("schedule", __name__, url_prefix="/schedule")
@@ -18,9 +18,8 @@ WEEK_RE = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
 @schedule_bp.route("/")
 @login_required
 def view():
-    """Vue calendrier par rôle."""
     if current_user.role == "admin":
-        entries = Schedule.query.join(Course).order_by(Schedule.day_of_week, Schedule.start_time).all()
+        entries = Schedule.query.join(Enseignement).order_by(Schedule.day_of_week, Schedule.start_time).all()
 
     elif current_user.role == "professor":
         prof = current_user.professor_profile
@@ -28,8 +27,8 @@ def view():
             abort(403)
         entries = (
             Schedule.query
-            .join(Course, Schedule.course_id == Course.id)
-            .filter(Course.professor_id == prof.id)
+            .join(Enseignement, Schedule.enseignement_id == Enseignement.id)
+            .filter(Enseignement.professor_id == prof.id)
             .order_by(Schedule.day_of_week, Schedule.start_time)
             .all()
         )
@@ -38,21 +37,19 @@ def view():
         student = current_user.student_profile
         if not student:
             abort(403)
-        # Cours de sa classe uniquement
-        enrolled_course_ids = (
-            db.session.query(Grade.course_id)
+        enrolled_ens_ids = (
+            db.session.query(Grade.enseignement_id)
             .filter_by(student_id=student.id)
-            .subquery()
+            .scalar_subquery()
         )
         entries = (
             Schedule.query
-            .join(Course, Schedule.course_id == Course.id)
-            .filter(Schedule.course_id.in_(enrolled_course_ids))
+            .join(Enseignement, Schedule.enseignement_id == Enseignement.id)
+            .filter(Schedule.enseignement_id.in_(enrolled_ens_ids))
             .order_by(Schedule.day_of_week, Schedule.start_time)
             .all()
         )
 
-    # Organiser par jour
     by_day: dict[int, list] = {i: [] for i in range(6)}
     for e in entries:
         by_day[e.day_of_week].append(e)
@@ -64,23 +61,18 @@ def view():
 @schedule_bp.route("/api")
 @login_required
 def api():
-    """API JSON pour le calendrier, filtrée par rôle."""
     week = request.args.get("week", "").strip()
     if not WEEK_RE.match(week):
         return jsonify({"error": "Format semaine invalide (YYYY-WNN)"}), 400
 
-    # Calculer les dates de la semaine (lundi à dimanche)
     from datetime import datetime, timedelta
     year, wnum = map(int, week.split("-W"))
-    # Trouver le lundi de la semaine
     jan1 = datetime(year, 1, 1)
     monday = jan1 + timedelta(days=(wnum-1)*7 - jan1.weekday())
     week_dates = [monday + timedelta(days=i) for i in range(7)]
 
-    events = []
-
     if current_user.role == "admin":
-        schedules = Schedule.query.join(Course).all()
+        schedules = Schedule.query.join(Enseignement).all()
 
     elif current_user.role == "professor":
         prof = current_user.professor_profile
@@ -88,65 +80,65 @@ def api():
             abort(403)
         schedules = (
             Schedule.query
-            .join(Course, Schedule.course_id == Course.id)
-            .filter(Course.professor_id == prof.id)
+            .join(Enseignement, Schedule.enseignement_id == Enseignement.id)
+            .filter(Enseignement.professor_id == prof.id)
             .all()
         )
 
-    else:  # student
+    else:
         student = current_user.student_profile
         if not student:
             abort(403)
-        # Cours inscrits uniquement
-        enrolled_course_ids = (
-            db.session.query(Grade.course_id)
+        enrolled_ens_ids = (
+            db.session.query(Grade.enseignement_id)
             .filter_by(student_id=student.id)
-            .subquery()
+            .scalar_subquery()
         )
         schedules = (
             Schedule.query
-            .join(Course, Schedule.course_id == Course.id)
-            .filter(Schedule.course_id.in_(enrolled_course_ids))
+            .join(Enseignement, Schedule.enseignement_id == Enseignement.id)
+            .filter(Schedule.enseignement_id.in_(enrolled_ens_ids))
             .all()
         )
 
+    events = []
     for s in schedules:
-        course = s.course
+        ens = s.enseignement
         day_date = week_dates[s.day_of_week]
         start_dt = datetime.combine(day_date, datetime.strptime(s.start_time, "%H:%M").time())
         end_dt = datetime.combine(day_date, datetime.strptime(s.end_time, "%H:%M").time())
 
         events.append({
             "id": s.id,
-            "title": f"{course.code} - {course.name}",
+            "title": f"{ens.code} - {ens.name}",
             "start": start_dt.isoformat(),
             "end": end_dt.isoformat(),
             "extendedProps": {
                 "room": s.room,
-                "professor": course.professor.user.username,
-                "class_name": course.class_name,
+                "professor": ens.professor.user.username,
+                "class_name": ens.class_name,
             }
         })
 
     response = jsonify(events)
-    response.headers["Cache-Control"] = "private, max-age=300"  # 5 min cache
+    response.headers["Cache-Control"] = "private, max-age=300"
     return response
 
 
-# ─── ADMIN CRUD ───────────────────────────────────────────────────────────────
+# ─── ADMIN CRUD ──────────────────────────────────────────────────────────────
 
 @schedule_bp.route("/admin/create", methods=["GET", "POST"])
 @login_required
 @admin_required
 def create():
     form = ScheduleForm()
-    form.course_id.choices = [
-        (c.id, f"{c.code} — {c.name} ({c.class_name})")
-        for c in Course.query.order_by(Course.name).all()
+    form.enseignement_id.choices = [
+        (e.id, f"{e.code} — {e.name} ({e.class_name})")
+        for e in Enseignement.query.join(Matiere).order_by(Matiere.name).all()
     ]
     if form.validate_on_submit():
         entry = Schedule(
-            course_id=form.course_id.data,
+            enseignement_id=form.enseignement_id.data,
             day_of_week=form.day_of_week.data,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
@@ -166,12 +158,12 @@ def create():
 def edit(id: int):
     entry = Schedule.query.get_or_404(id)
     form = ScheduleForm(obj=entry)
-    form.course_id.choices = [
-        (c.id, f"{c.code} — {c.name} ({c.class_name})")
-        for c in Course.query.order_by(Course.name).all()
+    form.enseignement_id.choices = [
+        (e.id, f"{e.code} — {e.name} ({e.class_name})")
+        for e in Enseignement.query.join(Matiere).order_by(Matiere.name).all()
     ]
     if form.validate_on_submit():
-        entry.course_id = form.course_id.data
+        entry.enseignement_id = form.enseignement_id.data
         entry.day_of_week = form.day_of_week.data
         entry.start_time = form.start_time.data
         entry.end_time = form.end_time.data

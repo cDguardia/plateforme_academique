@@ -36,21 +36,21 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
-    # Vérifier lockout
-    lockout_until = session.get("lockout_until")
-    if lockout_until and datetime.utcnow().timestamp() < lockout_until:
-        remaining = int(lockout_until - datetime.utcnow().timestamp())
-        flash(f"Compte verrouillé. Réessayez dans {remaining} secondes.", "danger")
-        return render_template("login.html", form=LoginForm())
-
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data.strip()).first()
 
+        # Vérifier lockout côté serveur (DB)
+        if user and user.locked_until and datetime.utcnow() < user.locked_until:
+            remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
+            flash(f"Compte verrouillé. Réessayez dans {remaining} secondes.", "danger")
+            return render_template("login.html", form=form)
+
         if user and user.is_active and user.check_password(form.password.data):
-            # Reset échecs
-            session.pop("failed_attempts", None)
-            session.pop("lockout_until", None)
+            # Reset échecs côté serveur
+            user.failed_login_attempts = 0
+            user.locked_until = None
+            db.session.commit()
 
             if user.totp_enabled:
                 # Stocker l'ID en session pré-auth, rediriger vers vérification 2FA
@@ -81,13 +81,16 @@ def login():
                 return redirect(next_page)
             return redirect(url_for("dashboard"))
         else:
-            # Échec de connexion
-            failed_attempts = session.get("failed_attempts", 0) + 1
-            session["failed_attempts"] = failed_attempts
-
-            if failed_attempts >= 5:
-                session["lockout_until"] = (datetime.utcnow() + timedelta(minutes=15)).timestamp()
-                log_audit("account_locked")
+            # Échec de connexion — lockout côté serveur (DB)
+            if user:
+                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                if user.failed_login_attempts >= 5:
+                    user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+                    db.session.commit()
+                    log_audit("account_locked", username=form.username.data.strip())
+                else:
+                    db.session.commit()
+                    log_audit("login_failed", username=form.username.data.strip())
             else:
                 log_audit("login_failed", username=form.username.data.strip())
 
@@ -119,6 +122,20 @@ def two_fa_verify():
             session.pop("pre_auth_user_id", None)
             login_user(user, remember=False)
             session.permanent = True
+
+            # Créer session active (identique au login sans 2FA)
+            token = _get_serializer().dumps({"user_id": user.id, "login_time": datetime.utcnow().isoformat()})
+            session_token_hash = UserSession.hash_token(token)
+            user_session = UserSession(
+                user_id=user.id,
+                token_hash=session_token_hash,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get("User-Agent")[:255] if request.headers.get("User-Agent") else None,
+            )
+            db.session.add(user_session)
+            db.session.commit()
+            session["session_token"] = token
+
             log_audit("login_success_2fa")
             flash("Connexion établie avec 2FA.", "success")
             return redirect(url_for("dashboard"))
@@ -184,8 +201,20 @@ def two_fa_disable():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    # Révoquer la session active en DB
+    token = session.get("session_token")
+    if token:
+        user_session = UserSession.query.filter_by(
+            token_hash=UserSession.hash_token(token),
+            revoked=False,
+        ).first()
+        if user_session:
+            user_session.revoked = True
+            db.session.commit()
+
     log_audit("logout")
     logout_user()
+    session.clear()
     flash("Vous avez été déconnecté.", "info")
     return redirect(url_for("auth.login"))
 
@@ -197,10 +226,16 @@ def register():
 
     form = RegisterForm()
     if form.validate_on_submit():
+        # Seul le rôle "student" est autorisé via l'inscription publique
+        # Les professeurs et admins doivent être créés par un administrateur
+        if form.role.data not in ("student",):
+            flash("Seul le rôle étudiant est disponible à l'inscription.", "danger")
+            return render_template("register.html", form=form)
+
         user = User(
             username=form.username.data.strip(),
             email=form.email.data.strip().lower(),
-            role=form.role.data,
+            role="student",  # Forcer le rôle étudiant
         )
         user.set_password(form.password.data)
         db.session.add(user)

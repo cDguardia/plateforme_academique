@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if enseignement else 'Nouvel' }} enseignement{% endblock %}
+{% block page_title %}{{ 'Modifier l\'enseignement' if enseignement else 'Nouvel enseignement' }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+  <p style="color:var(--text-dim); margin-bottom:16px;">
+    Associez une matière à une classe et assignez un professeur.
+  </p>
+
+  <form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+      <label>{{ form.matiere_id.label.text }}</label>
+      {{ form.matiere_id(class="form-input") }}
+      {% for e in form.matiere_id.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label>{{ form.classe_id.label.text }}</label>
+      {{ form.classe_id(class="form-input") }}
+      {% for e in form.classe_id.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="form-group">
+      <label>{{ form.professor_id.label.text }}</label>
+      {{ form.professor_id(class="form-input") }}
+      {% for e in form.professor_id.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+      <button type="submit" class="btn btn-primary">{{ 'Modifier' if enseignement else 'Créer' }}</button>
+      <a href="{{ url_for('admin.enseignements') }}" class="btn btn-secondary">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

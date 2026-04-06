@@ -13,14 +13,13 @@ from sqlalchemy import func
 
 from app.extensions import db, limiter
 from app.forms import ProfileStudentForm
-from app.models import Course, Grade, Professor, User, UserSession, log_audit
+from app.models import Attendance, Enseignement, Grade, Matiere, Professor, User, UserSession, log_audit
 from app.rbac import student_required
 
 student_bp = Blueprint("student", __name__)
 
 
 def _get_student_or_403():
-    """Récupère le profil Student de l'utilisateur connecté."""
     student = current_user.student_profile
     if not student:
         from flask import abort
@@ -36,7 +35,6 @@ def _get_student_or_403():
 def dashboard():
     student = _get_student_or_403()
 
-    # Stats personnelles
     enrolled = Grade.query.filter_by(student_id=student.id).count()
     graded = Grade.query.filter_by(student_id=student.id).filter(Grade.grade.isnot(None)).count()
     average = (
@@ -53,30 +51,30 @@ def dashboard():
         "pending_grades": pending,
     }
 
-    # Mes cours (5 premiers)
     rows = (
-        db.session.query(Grade, Course, Professor, User)
-        .join(Course, Grade.course_id == Course.id)
-        .join(Professor, Course.professor_id == Professor.id)
+        db.session.query(Grade, Enseignement, Matiere, Professor, User)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .join(Professor, Enseignement.professor_id == Professor.id)
         .join(User, Professor.user_id == User.id)
         .filter(Grade.student_id == student.id)
-        .order_by(Course.name)
+        .order_by(Matiere.name)
         .limit(5)
         .all()
     )
     my_courses = [
         {
-            "course": c,
+            "course": ens,
             "professor_name": u.username,
             "grade": float(g.grade) if g.grade is not None else None,
         }
-        for g, c, p, u in rows
+        for g, ens, mat, p, u in rows
     ]
 
-    # Dernières notes
     recent = (
-        db.session.query(Grade, Course)
-        .join(Course, Grade.course_id == Course.id)
+        db.session.query(Grade, Enseignement, Matiere)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
         .filter(Grade.student_id == student.id)
         .filter(Grade.grade.isnot(None))
         .order_by(Grade.graded_at.desc())
@@ -84,8 +82,8 @@ def dashboard():
         .all()
     )
     recent_grades = [
-        {"course_name": c.name, "value": float(g.grade), "graded_at": g.graded_at}
-        for g, c in recent
+        {"course_name": mat.name, "value": float(g.grade), "graded_at": g.graded_at}
+        for g, ens, mat in recent
     ]
 
     return render_template(
@@ -103,44 +101,48 @@ def courses():
     student = _get_student_or_403()
     tab = request.args.get("tab", "enrolled")
 
-    # Cours inscrits
     enrolled_rows = (
-        db.session.query(Grade, Course, Professor, User)
-        .join(Course, Grade.course_id == Course.id)
-        .join(Professor, Course.professor_id == Professor.id)
+        db.session.query(Grade, Enseignement, Matiere, Professor, User)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .join(Professor, Enseignement.professor_id == Professor.id)
         .join(User, Professor.user_id == User.id)
         .filter(Grade.student_id == student.id)
-        .order_by(Course.name)
+        .order_by(Matiere.name)
         .all()
     )
     enrolled = [
         {
-            "course": c,
+            "course": ens,
             "professor_name": u.username,
             "grade": float(g.grade) if g.grade is not None else None,
         }
-        for g, c, p, u in enrolled_rows
+        for g, ens, mat, p, u in enrolled_rows
     ]
     enrolled_ids = {item["course"].id for item in enrolled}
 
-    # Cours disponibles pour la classe (non inscrits)
-    available_rows = (
-        db.session.query(Course, Professor, User)
-        .join(Professor, Course.professor_id == Professor.id)
-        .join(User, Professor.user_id == User.id)
-        .filter(Course.class_name == student.class_name)
-        .filter(Course.id.notin_(enrolled_ids))
-        .order_by(Course.name)
-        .all()
-    )
-    # Attribuer les propriétés directement pour simplifier le template
-    available_display = []
-    for c, _p, u in available_rows:
-        available_display.append({
-            "id": c.id, "name": c.name, "code": c.code,
-            "class_name": c.class_name, "credits": c.credits,
-            "professor_name": u.username,
-        })
+    # Enseignements disponibles pour la classe de l'étudiant (non inscrits)
+    if student.classe_id:
+        available_rows = (
+            db.session.query(Enseignement, Matiere, Professor, User)
+            .join(Matiere, Enseignement.matiere_id == Matiere.id)
+            .join(Professor, Enseignement.professor_id == Professor.id)
+            .join(User, Professor.user_id == User.id)
+            .filter(Enseignement.classe_id == student.classe_id)
+            .filter(Enseignement.id.notin_(enrolled_ids) if enrolled_ids else True)
+            .order_by(Matiere.name)
+            .all()
+        )
+        available_display = []
+        for ens, mat, _p, u in available_rows:
+            if ens.id not in enrolled_ids:
+                available_display.append({
+                    "id": ens.id, "name": mat.name, "code": mat.code,
+                    "class_name": ens.class_name, "credits": mat.credits,
+                    "professor_name": u.username,
+                })
+    else:
+        available_display = []
 
     return render_template(
         "student/courses.html",
@@ -155,29 +157,27 @@ def courses():
 @student_required
 def course_detail(id: int):
     student = _get_student_or_403()
-    course = Course.query.get_or_404(id)
+    ens = Enseignement.query.get_or_404(id)
 
-    # Vérifier que l'étudiant est inscrit à ce cours (IDOR protection)
     my_grade_entry = Grade.query.filter_by(
-        student_id=student.id, course_id=course.id
+        student_id=student.id, enseignement_id=ens.id
     ).first()
     if not my_grade_entry:
         from flask import abort
         abort(403)
 
     my_grade = float(my_grade_entry.grade) if my_grade_entry.grade is not None else None
-    professor_name = course.professor.user.username
+    professor_name = ens.professor.user.username
 
-    # Stats anonymisées de la classe
     grades_all = (
         db.session.query(Grade.grade)
-        .filter_by(course_id=course.id)
+        .filter_by(enseignement_id=ens.id)
         .filter(Grade.grade.isnot(None))
         .all()
     )
     values = [float(r.grade) for r in grades_all]
     class_stats = {
-        "student_count": Grade.query.filter_by(course_id=course.id).count(),
+        "student_count": Grade.query.filter_by(enseignement_id=ens.id).count(),
         "average": sum(values) / len(values) if values else None,
         "highest": max(values) if values else None,
         "lowest": min(values) if values else None,
@@ -185,7 +185,7 @@ def course_detail(id: int):
 
     return render_template(
         "student/course_detail.html",
-        course=course,
+        course=ens,
         my_grade=my_grade,
         professor_name=professor_name,
         class_stats=class_stats,
@@ -199,30 +199,28 @@ def course_enroll():
     student = _get_student_or_403()
     if request.method == "POST":
         try:
-            course_id = int(request.form.get("course_id", 0))
+            ens_id = int(request.form.get("course_id", 0))
         except ValueError:
             flash("Cours invalide.", "danger")
             return redirect(url_for("student.courses", tab="available"))
 
-        course = Course.query.get_or_404(course_id)
+        ens = Enseignement.query.get_or_404(ens_id)
 
-        # Vérifier que le cours est bien pour la classe de l'étudiant
-        if course.class_name != student.class_name:
+        if not student.classe_id or ens.classe_id != student.classe_id:
             flash("Ce cours n'est pas disponible pour votre classe.", "danger")
             return redirect(url_for("student.courses", tab="available"))
 
-        # Vérifier non-inscription existante
         existing = Grade.query.filter_by(
-            student_id=student.id, course_id=course.id
+            student_id=student.id, enseignement_id=ens.id
         ).first()
         if existing:
             flash("Vous êtes déjà inscrit à ce cours.", "warning")
             return redirect(url_for("student.courses"))
 
-        db.session.add(Grade(student_id=student.id, course_id=course.id))
+        db.session.add(Grade(student_id=student.id, enseignement_id=ens.id))
         db.session.commit()
-        log_audit("course_enroll", resource_type="course", resource_id=course.id)
-        flash(f"Inscrit au cours « {course.name} ».", "success")
+        log_audit("course_enroll", resource_type="enseignement", resource_id=ens.id)
+        flash(f"Inscrit au cours « {ens.name} ».", "success")
         return redirect(url_for("student.courses"))
 
     return redirect(url_for("student.courses", tab="available"))
@@ -234,16 +232,15 @@ def course_enroll():
 def course_drop(id: int):
     student = _get_student_or_403()
     grade_entry = Grade.query.filter_by(
-        student_id=student.id, course_id=id
+        student_id=student.id, enseignement_id=id
     ).first_or_404()
 
-    # Interdire la désinscription si déjà noté
     if grade_entry.grade is not None:
         flash("Vous ne pouvez pas vous désinscrire d'un cours déjà noté.", "danger")
         return redirect(url_for("student.courses"))
 
-    course_name = grade_entry.course.name
-    log_audit("course_drop", resource_type="course", resource_id=id)
+    course_name = grade_entry.enseignement.name
+    log_audit("course_drop", resource_type="enseignement", resource_id=id)
     db.session.delete(grade_entry)
     db.session.commit()
     flash(f"Désinscrit du cours « {course_name} ».", "info")
@@ -259,29 +256,29 @@ def grades():
     student = _get_student_or_403()
 
     rows = (
-        db.session.query(Grade, Course, Professor, User)
-        .join(Course, Grade.course_id == Course.id)
-        .join(Professor, Course.professor_id == Professor.id)
+        db.session.query(Grade, Enseignement, Matiere, Professor, User)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .join(Professor, Enseignement.professor_id == Professor.id)
         .join(User, Professor.user_id == User.id)
         .filter(Grade.student_id == student.id)
-        .order_by(Course.name)
+        .order_by(Matiere.name)
         .all()
     )
 
     grade_list = [
         {
-            "course_id": c.id,
-            "course_name": c.name,
-            "course_code": c.code,
+            "course_id": ens.id,
+            "course_name": mat.name,
+            "course_code": mat.code,
             "professor_name": u.username,
-            "credits": c.credits,
+            "credits": mat.credits,
             "grade": float(g.grade) if g.grade is not None else None,
             "graded_at": g.graded_at,
         }
-        for g, c, p, u in rows
+        for g, ens, mat, p, u in rows
     ]
 
-    # Calcul résumé
     graded = [x for x in grade_list if x["grade"] is not None]
     total_credits = sum(x["credits"] for x in grade_list)
     validated = [x for x in graded if x["grade"] >= 10]
@@ -307,21 +304,19 @@ def grades():
 @student_required
 @limiter.limit("5 per minute", error_message="Trop d'exports. Réessayez dans 1 minute.")
 def grades_export():
-    """Export PDF sécurisé du relevé de notes."""
     student = _get_student_or_403()
 
-    # Vérification stricte : seulement ses propres notes
     rows = (
-        db.session.query(Grade, Course, Professor, User)
-        .join(Course, Grade.course_id == Course.id)
-        .join(Professor, Course.professor_id == Professor.id)
+        db.session.query(Grade, Enseignement, Matiere, Professor, User)
+        .join(Enseignement, Grade.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .join(Professor, Enseignement.professor_id == Professor.id)
         .join(User, Professor.user_id == User.id)
         .filter(Grade.student_id == student.id)
-        .order_by(Course.name)
+        .order_by(Matiere.name)
         .all()
     )
 
-    # Générer PDF
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
@@ -330,28 +325,23 @@ def grades_export():
         parent=styles['Heading1'],
         fontSize=18,
         spaceAfter=30,
-        alignment=1,  # Center
+        alignment=1,
     )
     normal_style = styles['Normal']
 
     story = []
-
-    # Titre
     story.append(Paragraph("Relevé de Notes", title_style))
     story.append(Spacer(1, 12))
-
-    # Infos étudiant
     story.append(Paragraph(f"Étudiant: {current_user.username}", normal_style))
     story.append(Paragraph(f"Numéro étudiant: {student.student_number}", normal_style))
-    story.append(Paragraph(f"Classe: {student.class_name}", normal_style))
+    story.append(Paragraph(f"Classe: {student.class_name or 'N/A'}", normal_style))
     story.append(Spacer(1, 12))
 
-    # Tableau des notes
     data = [["Cours", "Code", "Crédits", "Note", "Date"]]
-    for g, c, _p, _u in rows:
+    for g, ens, mat, _p, _u in rows:
         grade_val = f"{float(g.grade):.2f}" if g.grade is not None else "En attente"
         date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "\u2014"
-        data.append([c.name, c.code, str(c.credits), grade_val, date_val])
+        data.append([mat.name, mat.code, str(mat.credits), grade_val, date_val])
 
     table = Table(data)
     table.setStyle(TableStyle([
@@ -365,12 +355,9 @@ def grades_export():
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
     story.append(table)
-
     doc.build(story)
 
-    # Nom de fichier aléatoire
     filename = f"releve_{secrets.token_hex(8)}.pdf"
-
     log_audit("grades_export_pdf", resource_type="student", resource_id=student.id)
     buffer.seek(0)
     return Response(
@@ -378,6 +365,48 @@ def grades_export():
         mimetype="application/pdf",
         headers={"Content-Disposition": f"attachment;filename={filename}"},
     )
+
+
+# ─── ATTENDANCE (vue étudiant) ───────────────────────────────────────────────
+
+@student_bp.route("/attendance")
+@login_required
+@student_required
+def attendance():
+    student = _get_student_or_403()
+
+    rows = (
+        db.session.query(Attendance, Enseignement, Matiere)
+        .join(Enseignement, Attendance.enseignement_id == Enseignement.id)
+        .join(Matiere, Enseignement.matiere_id == Matiere.id)
+        .filter(Attendance.student_id == student.id)
+        .order_by(Attendance.date.desc())
+        .all()
+    )
+
+    records = [
+        {
+            "date": a.date,
+            "course_name": mat.name,
+            "course_code": mat.code,
+            "status": a.status,
+        }
+        for a, ens, mat in rows
+    ]
+
+    total = len(records)
+    absents = sum(1 for r in records if r["status"] == "absent")
+    lates = sum(1 for r in records if r["status"] == "late")
+    presents = total - absents - lates
+
+    summary = {
+        "total": total,
+        "presents": presents,
+        "absents": absents,
+        "lates": lates,
+    }
+
+    return render_template("student/attendance.html", records=records, summary=summary)
 
 
 # ─── PROFILE ─────────────────────────────────────────────────────────────────
@@ -388,12 +417,11 @@ def grades_export():
 def profile():
     student = _get_student_or_403()
 
-    # Stats académiques
     graded = Grade.query.filter_by(student_id=student.id).filter(Grade.grade.isnot(None)).all()
     avg = sum(float(g.grade) for g in graded) / len(graded) if graded else None
     validated = [g for g in graded if float(g.grade) >= 10]
-    total_credits = sum(g.course.credits for g in Grade.query.filter_by(student_id=student.id).all())
-    validated_credits = sum(g.course.credits for g in validated)
+    total_credits = sum(g.enseignement.credits for g in Grade.query.filter_by(student_id=student.id).all())
+    validated_credits = sum(g.enseignement.credits for g in validated)
 
     academic = {
         "average": avg,
@@ -418,7 +446,6 @@ def profile_edit():
         new_username = form.username.data.strip()
         new_email = form.email.data.strip().lower()
 
-        # Vérifier unicité si modifié
         if new_username != current_user.username:
             if User.query.filter_by(username=new_username).first():
                 flash("Ce nom d'utilisateur est déjà pris.", "danger")
@@ -442,23 +469,25 @@ def profile_edit():
 @login_required
 @student_required
 def sessions():
-    sessions = UserSession.query.filter_by(
-        user_id=current_user.id, is_active=True
+    user_sessions = UserSession.query.filter_by(
+        user_id=current_user.id, revoked=False
     ).order_by(UserSession.created_at.desc()).all()
-    return render_template("student/sessions.html", sessions=sessions)
+    return render_template("student/sessions.html", sessions=user_sessions)
 
 
 @student_bp.route("/profile/sessions/<int:session_id>/revoke", methods=["POST"])
 @login_required
 @student_required
 def revoke_session(session_id):
-    session_to_revoke = UserSession.query.filter_by(id=session_id, user_id=current_user.id, is_active=True).first()
+    session_to_revoke = UserSession.query.filter_by(
+        id=session_id, user_id=current_user.id, revoked=False
+    ).first()
     if not session_to_revoke:
         flash("Session introuvable.", "danger")
         return redirect(url_for("student.sessions"))
 
-    session_to_revoke.is_active = False
+    session_to_revoke.revoked = True
     db.session.commit()
-    log_audit("session_revoked", details=f"Session ID: {session_id}")
+    log_audit("session_revoked")
     flash("Session révoquée.", "success")
     return redirect(url_for("student.sessions"))

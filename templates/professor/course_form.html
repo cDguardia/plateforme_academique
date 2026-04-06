@@ -1,87 +1,17 @@
+{# This template is no longer used — courses are managed by admin only. #}
 {% extends "base.html" %}
-
-{% block title %}{{ 'Modifier' if course else 'Créer' }} un cours{% endblock %}
-{% block page_title %}{{ 'Modifier' if course else 'Créer' }} un cours{% endblock %}
-
-{% block breadcrumb %}
-<div class="breadcrumb">
-  <a href="{{ url_for('professor.courses') }}">Mes cours</a>
-  <span>›</span>
-  <span>{{ 'Modifier' if course else 'Nouveau cours' }}</span>
-</div>
-{% endblock %}
-
+{% block title %}Non disponible{% endblock %}
 {% block content %}
-<div style="max-width:560px;">
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">
-        {{ '✏️ Modifier le cours' if course else '📚 Nouveau cours' }}
-      </div>
-    </div>
-    <div class="card-body">
-      <form method="post"
-            action="{{ url_for('professor.course_edit', id=course.id) if course else url_for('professor.course_create') }}"
-            novalidate>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <div class="form-group">
-          <label for="name">Intitulé du cours</label>
-          <input type="text" id="name" name="name"
-                 value="{{ form.name.data or '' }}"
-                 placeholder="ex. Cryptographie appliquée" required>
-          {% if form.name.errors %}
-            {% for e in form.name.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
-          {% endif %}
-        </div>
-
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="code">Code du cours</label>
-            <input type="text" id="code" name="code"
-                   value="{{ form.code.data or '' }}"
-                   placeholder="ex. CRYPTO-101"
-                   style="text-transform:uppercase;" required>
-            <div class="form-hint">Identifiant unique (lettres et chiffres).</div>
-            {% if form.code.errors %}
-              {% for e in form.code.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
-            {% endif %}
-          </div>
-          <div class="form-group">
-            <label for="credits">Crédits ECTS</label>
-            <input type="number" id="credits" name="credits"
-                   value="{{ form.credits.data or 3 }}"
-                   min="1" max="30" required>
-            {% if form.credits.errors %}
-              {% for e in form.credits.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="class_name">Classe cible</label>
-          <input type="text" id="class_name" name="class_name"
-                 value="{{ form.class_name.data or '' }}"
-                 placeholder="ex. GCS2" required>
-          {% if form.class_name.errors %}
-            {% for e in form.class_name.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
-          {% endif %}
-        </div>
-
-        <div class="form-group">
-          <label for="description">Description (optionnel)</label>
-          <textarea id="description" name="description"
-                    placeholder="Objectifs, contenu du cours...">{{ form.description.data or '' }}</textarea>
-        </div>
-
-        <div class="flex-row" style="justify-content:flex-end; gap:10px;">
-          <a href="{{ url_for('professor.courses') }}" class="btn btn-outline">Annuler</a>
-          <button type="submit" class="btn btn-primary">
-            {{ '💾 Enregistrer' if course else '📚 Créer le cours' }}
-          </button>
-        </div>
-      </form>
-    </div>
+<div class="card">
+  <div class="empty-state" style="padding:64px 20px;">
+    <div class="icon">🚫</div>
+    <p>Cette page n'est plus disponible.</p>
+    <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">
+      Les cours sont gérés par l'administration.
+    </p>
+    <a href="{{ url_for('professor.courses') }}" class="btn btn-outline" style="margin-top:16px;">
+      ← Retour à mes cours
+    </a>
   </div>
 </div>
 {% endblock %}
