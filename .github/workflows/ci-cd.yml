@@ -2,7 +2,7 @@ name: CI/CD — Plateforme Académique Sécurisée
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, clement ]
 
 permissions:
   contents: read
