@@ -42,9 +42,6 @@ coverage.xml
 .hypothesis/
 tests/__pycache__/
 tests/*.pyc
-test_*.py
-*_test.py
-conftest.py
 
 # ─── Logs et fichiers temporaires ────────────────────────────────────────────
 *.log
