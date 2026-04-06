@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Paramètres{% endblock %}
-{% block page_title %}Paramètres{% endblock %}
+{% block title %}Politiques de securite{% endblock %}
+{% block page_title %}Politiques de securite{% endblock %}
 
 {% block content %}
-<div style="max-width:640px;">
+<div style="max-width:720px;">
 
-  <!-- Session -->
+  <!-- Sessions -->
   <div class="card mb-24">
     <div class="card-header">
-      <div class="card-title">🔑 Sécurité des sessions</div>
+      <div class="card-title">Securite des sessions</div>
     </div>
     <div class="card-body">
       <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
@@ -18,35 +18,78 @@
 
         <div class="grid-2">
           <div class="form-group">
-            <label for="session_lifetime">Durée de session (minutes)</label>
-            <input type="number" id="session_lifetime" name="session_lifetime"
-                   value="{{ settings.session_lifetime or 30 }}"
-                   min="5" max="1440">
-            <div class="form-hint">Durée d'inactivité avant déconnexion automatique.</div>
+            <label for="session_lifetime_minutes">Duree de session (minutes)</label>
+            <input type="number" id="session_lifetime_minutes" name="session_lifetime_minutes"
+                   value="{{ policy.session_lifetime_minutes }}" min="5" max="1440">
+            <div class="form-hint">Duree d'inactivite avant deconnexion automatique.</div>
           </div>
           <div class="form-group">
-            <label>Options de sécurité</label>
+            <label>Options</label>
             <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
-              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
-                             font-size:13px; font-weight:400; cursor:pointer;">
-                <input type="checkbox" name="session_secure" value="1"
-                       {% if settings.session_secure %}checked{% endif %}
-                       style="width:auto;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+                <input type="checkbox" name="session_secure_cookie" value="1"
+                       {% if policy.session_secure_cookie %}checked{% endif %} style="width:auto;">
                 Cookie Secure (HTTPS uniquement)
               </label>
-              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
-                             font-size:13px; font-weight:400; cursor:pointer;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
                 <input type="checkbox" name="session_httponly" value="1"
-                       {% if settings.session_httponly %}checked{% endif %}
-                       style="width:auto;">
+                       {% if policy.session_httponly %}checked{% endif %} style="width:auto;">
                 HttpOnly (inaccessible en JS)
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+                <input type="checkbox" name="session_fingerprint_enabled" value="1"
+                       {% if policy.session_fingerprint_enabled %}checked{% endif %} style="width:auto;">
+                Fingerprint de session (IP + User-Agent)
               </label>
             </div>
           </div>
         </div>
 
         <div style="display:flex; justify-content:flex-end;">
-          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authentification -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">Authentification et verrouillage</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="auth">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="max_login_attempts">Tentatives avant verrouillage</label>
+            <input type="number" id="max_login_attempts" name="max_login_attempts"
+                   value="{{ policy.max_login_attempts }}" min="1" max="20">
+          </div>
+          <div class="form-group">
+            <label for="lockout_duration_minutes">Duree du verrouillage (minutes)</label>
+            <input type="number" id="lockout_duration_minutes" name="lockout_duration_minutes"
+                   value="{{ policy.lockout_duration_minutes }}" min="1" max="120">
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+            <input type="checkbox" name="account_lockout_enabled" value="1"
+                   {% if policy.account_lockout_enabled %}checked{% endif %} style="width:auto;">
+            Verrouillage automatique apres echecs de connexion
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+            <input type="checkbox" name="totp_2fa_available" value="1"
+                   {% if policy.totp_2fa_available %}checked{% endif %} style="width:auto;">
+            Authentification 2FA (TOTP) disponible pour les utilisateurs
+          </label>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </form>
     </div>
@@ -55,7 +98,7 @@
   <!-- Politique de mots de passe -->
   <div class="card mb-24">
     <div class="card-header">
-      <div class="card-title">🔒 Politique de mots de passe</div>
+      <div class="card-title">Politique de mots de passe</div>
     </div>
     <div class="card-body">
       <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
@@ -66,47 +109,97 @@
           <div class="form-group">
             <label for="pwd_min_length">Longueur minimale</label>
             <input type="number" id="pwd_min_length" name="pwd_min_length"
-                   value="{{ settings.pwd_min_length or 8 }}" min="6" max="128">
+                   value="{{ policy.pwd_min_length }}" min="6" max="128">
           </div>
           <div class="form-group">
-            <label>Complexité requise</label>
+            <label>Complexite requise</label>
             <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
-              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
-                             font-size:13px; font-weight:400; cursor:pointer;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
                 <input type="checkbox" name="pwd_require_upper" value="1"
-                       {% if settings.pwd_require_upper %}checked{% endif %}
-                       style="width:auto;">
+                       {% if policy.pwd_require_upper %}checked{% endif %} style="width:auto;">
                 Majuscule obligatoire
               </label>
-              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
-                             font-size:13px; font-weight:400; cursor:pointer;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
                 <input type="checkbox" name="pwd_require_digit" value="1"
-                       {% if settings.pwd_require_digit %}checked{% endif %}
-                       style="width:auto;">
+                       {% if policy.pwd_require_digit %}checked{% endif %} style="width:auto;">
                 Chiffre obligatoire
               </label>
-              <label style="display:flex; align-items:center; gap:8px; text-transform:none;
-                             font-size:13px; font-weight:400; cursor:pointer;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
                 <input type="checkbox" name="pwd_require_special" value="1"
-                       {% if settings.pwd_require_special %}checked{% endif %}
-                       style="width:auto;">
-                Caractère spécial obligatoire
+                       {% if policy.pwd_require_special %}checked{% endif %} style="width:auto;">
+                Caractere special obligatoire
               </label>
             </div>
           </div>
         </div>
 
         <div style="display:flex; justify-content:flex-end;">
-          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Informations système -->
+  <!-- Rate Limiting -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">Rate Limiting (anti brute-force)</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="rate_limiting">
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+              <input type="checkbox" name="rate_limiting_enabled" value="1"
+                     {% if policy.rate_limiting_enabled %}checked{% endif %} style="width:auto;">
+              Rate limiting active
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="login_rate_limit">Limite sur /login</label>
+            <input type="text" id="login_rate_limit" name="login_rate_limit"
+                   value="{{ policy.login_rate_limit }}" maxlength="30">
+            <div class="form-hint">Ex: 5 per minute, 10 per hour</div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Audit -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="card-title">Audit et journalisation</div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('admin.settings') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="audit">
+
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer; text-transform:none;">
+          <input type="checkbox" name="audit_logging_enabled" value="1"
+                 {% if policy.audit_logging_enabled %}checked{% endif %} style="width:auto;">
+          Journalisation des actions sensibles (audit logs)
+        </label>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Informations systeme -->
   <div class="card">
     <div class="card-header">
-      <div class="card-title">ℹ️ Informations système</div>
+      <div class="card-title">Informations systeme</div>
     </div>
     <div class="card-body">
       <div style="display:flex; flex-direction:column; gap:10px;">
@@ -117,6 +210,9 @@
           <span style="font-family:monospace; font-size:12px; color:var(--accent);">{{ val }}</span>
         </div>
         {% endfor %}
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:var(--text-dim);">
+        Derniere modification : {{ policy.updated_at.strftime('%d/%m/%Y %H:%M') if policy.updated_at else 'N/A' }}
       </div>
     </div>
   </div>

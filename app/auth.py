@@ -13,7 +13,7 @@ from itsdangerous import URLSafeTimedSerializer
 
 from app.extensions import db, limiter
 from app.forms import ChangePasswordForm, LoginForm, RegisterForm, TotpForm
-from app.models import Professor, Student, User, UserSession, log_audit
+from app.models import Professor, SecurityPolicy, Student, User, UserSession, log_audit
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -41,9 +41,10 @@ def login():
         user = User.query.filter_by(username=form.username.data.strip()).first()
 
         # Vérifier lockout côté serveur (DB)
-        if user and user.locked_until and datetime.utcnow() < user.locked_until:
+        policy = SecurityPolicy.get_policy()
+        if policy.account_lockout_enabled and user and user.locked_until and datetime.utcnow() < user.locked_until:
             remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
-            flash(f"Compte verrouillé. Réessayez dans {remaining} secondes.", "danger")
+            flash(f"Compte verrouille. Reessayez dans {remaining} secondes.", "danger")
             return render_template("login.html", form=form)
 
         if user and user.is_active and user.check_password(form.password.data):
@@ -81,11 +82,13 @@ def login():
                 return redirect(next_page)
             return redirect(url_for("dashboard"))
         else:
-            # Échec de connexion — lockout côté serveur (DB)
-            if user:
+            # Échec de connexion — lockout côté serveur (DB, policy-driven)
+            if user and policy.account_lockout_enabled:
                 user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
-                if user.failed_login_attempts >= 5:
-                    user.locked_until = datetime.utcnow() + timedelta(minutes=15)
+                max_attempts = policy.max_login_attempts or 5
+                lockout_min = policy.lockout_duration_minutes or 15
+                if user.failed_login_attempts >= max_attempts:
+                    user.locked_until = datetime.utcnow() + timedelta(minutes=lockout_min)
                     db.session.commit()
                     log_audit("account_locked", username=form.username.data.strip())
                 else:
@@ -147,8 +150,12 @@ def two_fa_verify():
 @auth_bp.route("/2fa/setup", methods=["GET", "POST"])
 @login_required
 def two_fa_setup():
+    policy = SecurityPolicy.get_policy()
+    if not policy.totp_2fa_available:
+        flash("L'authentification 2FA est desactivee par l'administrateur.", "warning")
+        return redirect(url_for("dashboard"))
     if current_user.totp_enabled:
-        flash("Le 2FA est déjà activé sur votre compte.", "info")
+        flash("Le 2FA est deja active sur votre compte.", "info")
         return redirect(url_for("dashboard"))
 
     # Générer un secret si pas encore fait

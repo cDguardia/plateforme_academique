@@ -89,6 +89,9 @@ keys/
 *.p12
 *.pfx
 
+# ─── Script de demo (local uniquement) ───────────────────────────────────────
+demo_seed.py
+
 # ─── Documentation temporaire ────────────────────────────────────────────────
 *.md.bak
 README.tmp

@@ -4,7 +4,6 @@ import os
 from datetime import datetime, timezone
 import secrets
 
-import click
 from flask import Flask, g, redirect, render_template, url_for, session, request, flash
 from flask_login import current_user, login_required, logout_user
 
@@ -47,87 +46,105 @@ def create_app(env: str | None = None) -> Flask:
     def load_user(user_id: str):
         return User.query.get(int(user_id))
 
-    # ── Headers de sécurité HTTP ─────────────────────────────────────────────
+    # ── Politiques de sécurité (DB-driven) ──────────────────────────────────
+    from app.models import SecurityPolicy
+
+    def _get_policy():
+        """Charge la politique de sécurité depuis la DB (cache par requête)."""
+        p = getattr(g, "_security_policy", None)
+        if p is None:
+            try:
+                p = SecurityPolicy.query.first()
+            except Exception:
+                p = None
+            g._security_policy = p
+        return p
+
+    # ── WAF Middleware ────────────────────────────────────────────────────────
     if not app.config.get("TESTING"):
         import re as _re
 
-        # Patterns WAF : séquences réellement dangereuses (pas de mots isolés)
         _SQLI_RE = _re.compile(
-            r"(\bunion\s+select\b"        # UNION SELECT
-            r"|;\s*(drop|alter|truncate)\b"  # ;DROP / ;ALTER
-            r"|\bor\s+1\s*=\s*1"          # OR 1=1
-            r"|\band\s+1\s*=\s*1"          # AND 1=1
-            r"|--\s*$"                      # commentaire SQL en fin de chaîne
-            r"|/\*.*?\*/"                   # commentaire bloc SQL
-            r"|<script"                     # XSS basique
-            r"|javascript\s*:"             # XSS javascript:
-            r"|\bon\w+\s*=)"              # event handlers (onclick=, onerror=)
-            , _re.IGNORECASE
+            r"(\bunion\s+select\b"
+            r"|;\s*(drop|alter|truncate)\b"
+            r"|\bor\s+1\s*=\s*1"
+            r"|\band\s+1\s*=\s*1"
+            r"|--\s*$"
+            r"|/\*.*?\*/)",
+            _re.IGNORECASE,
+        )
+        _XSS_RE = _re.compile(
+            r"(<script"
+            r"|javascript\s*:"
+            r"|\bon\w+\s*=)",
+            _re.IGNORECASE,
         )
         _SUSPICIOUS_UA = _re.compile(
-            r"(sqlmap|nmap|nikto|dirbuster|gobuster|havij|acunetix)", _re.IGNORECASE
+            r"(sqlmap|nmap|nikto|dirbuster|gobuster|havij|acunetix)",
+            _re.IGNORECASE,
         )
 
         @app.before_request
         def waf_middleware():
-            """Middleware WAF — bloque les patterns d'attaque sans faux positifs."""
-            # Bloquer les User-Agents d'outils d'attaque connus
-            user_agent = request.headers.get("User-Agent", "")
-            if _SUSPICIOUS_UA.search(user_agent):
+            """WAF — toujours actif, non desactivable."""
+            ua = request.headers.get("User-Agent", "")
+            if _SUSPICIOUS_UA.search(ua):
                 from flask import abort
                 abort(403)
 
-            # Vérifier les paramètres GET et POST avec des regex ciblées
-            for value in request.args.values():
-                if _SQLI_RE.search(str(value)):
+            all_values = list(request.args.values()) + list(request.form.values())
+            for value in all_values:
+                val = str(value)
+                if _SQLI_RE.search(val) or _XSS_RE.search(val):
                     from app.models import log_audit
                     log_audit("waf_blocked", resource_type="request")
-                    abort(403)
-            for value in request.form.values():
-                if _SQLI_RE.search(str(value)):
-                    from app.models import log_audit
-                    log_audit("waf_blocked", resource_type="request")
+                    from flask import abort
                     abort(403)
 
+    # ── CSP Nonce + Session Fingerprint ──────────────────────────────────────
     @app.before_request
     def set_csp_nonce():
         g.csp_nonce = secrets.token_hex(16)
 
-        # Vérification de session fingerprint
+        # Vérification de session fingerprint (contrôlée par la policy)
         if current_user.is_authenticated and "session_token" in session:
-            token = session["session_token"]
-            try:
-                user_session = UserSession.query.filter_by(
-                    user_id=current_user.id,
-                    token_hash=UserSession.hash_token(token),
-                    revoked=False
-                ).first()
-                if not user_session:
+            policy = _get_policy()
+            if not policy or policy.session_fingerprint_enabled:
+                token = session["session_token"]
+                try:
+                    user_session = UserSession.query.filter_by(
+                        user_id=current_user.id,
+                        token_hash=UserSession.hash_token(token),
+                        revoked=False,
+                    ).first()
+                    if not user_session:
+                        logout_user()
+                        session.clear()
+                        flash("Session invalide. Veuillez vous reconnecter.", "danger")
+                        return redirect(url_for("auth.login"))
+                    user_session.last_seen = datetime.now(timezone.utc)
+                    db.session.commit()
+                except Exception:
                     logout_user()
                     session.clear()
-                    flash("Session invalide. Veuillez vous reconnecter.", "danger")
+                    flash("Session expiree. Veuillez vous reconnecter.", "danger")
                     return redirect(url_for("auth.login"))
-                # Mettre à jour dernière activité
-                user_session.last_seen = datetime.utcnow()
-                db.session.commit()
-            except Exception:
-                logout_user()
-                session.clear()
-                flash("Session expirée. Veuillez vous reconnecter.", "danger")
-                return redirect(url_for("auth.login"))
 
+    # ── Security Headers — toujours actifs, non desactivables ──────────────
     @app.after_request
     def set_security_headers(response):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
 
-        csp_nonce = getattr(g, "csp_nonce", "")
+        nonce = getattr(g, "csp_nonce", "")
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            f"style-src 'self' 'nonce-{csp_nonce}'; "
-            f"script-src 'self' 'nonce-{csp_nonce}'; "
+            f"style-src 'self' 'nonce-{nonce}'; "
+            f"script-src 'self' 'nonce-{nonce}'; "
             "img-src 'self' data:; "
             "font-src 'self' data:"
         )
@@ -212,209 +229,6 @@ def create_app(env: str | None = None) -> Flask:
     def init_db_command():
         from app import models  # noqa: F401
         db.create_all()
-        click.echo("✓ Base de données initialisée.")
-
-    @app.cli.command("seed-db")
-    def seed_db_command():
-        from app import models  # noqa: F401
-        db.create_all()
-        _seed_demo_data()
-        click.echo("✓ Données de démonstration injectées.")
+        print("✓ Base de données initialisée.")
 
     return app
-
-
-def _seed_demo_data() -> None:
-    from app.models import AuditLog, Classe, Enseignement, Grade, Matiere, Professor, Schedule, Student, User
-
-    if User.query.first():
-        click.echo("ℹ Données déjà présentes — seed ignoré.")
-        return
-
-    # ── Utilisateurs ─────────────────────────────────────────────────────────
-    admin = User(username="admin", email="admin@guardia.school", role="admin")
-    admin.set_password("Admin123!")
-
-    prof1 = User(username="prof.martin", email="martin@guardia.school", role="professor")
-    prof1.set_password("Prof123!")
-
-    prof2 = User(username="prof.chen", email="chen@guardia.school", role="professor")
-    prof2.set_password("Prof123!")
-
-    prof3 = User(username="prof.duval", email="duval@guardia.school", role="professor")
-    prof3.set_password("Prof123!")
-
-    # Étudiants GCS2
-    gcs2_students = [
-        ("alice.dupont",   "alice@guardia.school",    "GCS2-001"),
-        ("bob.martin",     "bob@guardia.school",      "GCS2-002"),
-        ("claire.petit",   "claire@guardia.school",   "GCS2-003"),
-        ("david.blanc",    "david@guardia.school",    "GCS2-004"),
-        ("emma.leroy",     "emma@guardia.school",     "GCS2-005"),
-        ("felix.moreau",   "felix@guardia.school",    "GCS2-006"),
-    ]
-    # Étudiants GCS3
-    gcs3_students = [
-        ("julie.bernard",  "julie@guardia.school",    "GCS3-001"),
-        ("kevin.thomas",   "kevin@guardia.school",    "GCS3-002"),
-        ("lea.richard",    "lea@guardia.school",      "GCS3-003"),
-        ("maxime.robert",  "maxime@guardia.school",   "GCS3-004"),
-        ("nina.girard",    "nina@guardia.school",     "GCS3-005"),
-    ]
-
-    all_student_users = []
-    for uname, email, _ in gcs2_students + gcs3_students:
-        u = User(username=uname, email=email, role="student")
-        u.set_password("Student123!")
-        all_student_users.append(u)
-
-    db.session.add_all([admin, prof1, prof2, prof3, *all_student_users])
-    db.session.flush()
-
-    # ── Profils professeurs ───────────────────────────────────────────────────
-    p1 = Professor(user_id=prof1.id, department="Cybersécurité", specialization="Cryptographie, Pentesting")
-    p2 = Professor(user_id=prof2.id, department="Développement", specialization="DevSecOps, Web Security")
-    p3 = Professor(user_id=prof3.id, department="Réseaux", specialization="Architecture réseau, Cloud Security")
-    db.session.add_all([p1, p2, p3])
-    db.session.flush()
-
-    # ── Classes ──────────────────────────────────────────────────────────────
-    gcs2 = Classe(name="GCS2", description="Guardia Cybersecurity School — 2e année")
-    gcs3 = Classe(name="GCS3", description="Guardia Cybersecurity School — 3e année")
-    db.session.add_all([gcs2, gcs3])
-    db.session.flush()
-
-    # ── Profils étudiants ────────────────────────────────────────────────────
-    gcs2_profiles = []
-    for (_, _, num), u in zip(gcs2_students, all_student_users[:6]):
-        s = Student(user_id=u.id, student_number=num, classe_id=gcs2.id)
-        gcs2_profiles.append(s)
-
-    gcs3_profiles = []
-    for (_, _, num), u in zip(gcs3_students, all_student_users[6:]):
-        s = Student(user_id=u.id, student_number=num, classe_id=gcs3.id)
-        gcs3_profiles.append(s)
-
-    db.session.add_all(gcs2_profiles + gcs3_profiles)
-    db.session.flush()
-
-    # ── Matières ─────────────────────────────────────────────────────────────
-    matieres = [
-        Matiere(name="Cryptographie appliquée", code="CRYPTO-101",
-                credits=4, description="Algorithmes de chiffrement, PKI, TLS."),
-        Matiere(name="Sécurité des réseaux", code="SECU-201",
-                credits=3, description="Firewalls, IDS/IPS, VPN, analyse réseau."),
-        Matiere(name="Développement sécurisé", code="DEV-301",
-                credits=4, description="OWASP Top 10, revue de code, fuzzing."),
-        Matiere(name="Web Security & Pentest", code="WEB-401",
-                credits=3, description="BurpSuite, SQLi, XSS, CSRF, rapports."),
-        Matiere(name="Forensic & Incident Response", code="FORENSIC-501",
-                credits=4, description="Analyse post-incident, collecte de preuves, timeline."),
-        Matiere(name="Cloud Security", code="CLOUD-601",
-                credits=3, description="AWS/Azure sécurité, IAM, conteneurs, SIEM."),
-        Matiere(name="Gouvernance & Conformité", code="GRC-701",
-                credits=2, description="ISO 27001, RGPD, analyse de risques, PSSI."),
-    ]
-    db.session.add_all(matieres)
-    db.session.flush()
-
-    # ── Enseignements ────────────────────────────────────────────────────────
-    # GCS2 : 4 matières
-    ens_gcs2 = [
-        Enseignement(matiere_id=matieres[0].id, classe_id=gcs2.id, professor_id=p1.id),  # Crypto
-        Enseignement(matiere_id=matieres[1].id, classe_id=gcs2.id, professor_id=p1.id),  # Sécu réseaux
-        Enseignement(matiere_id=matieres[2].id, classe_id=gcs2.id, professor_id=p2.id),  # Dev sécurisé
-        Enseignement(matiere_id=matieres[3].id, classe_id=gcs2.id, professor_id=p2.id),  # Web Pentest
-    ]
-    # GCS3 : 5 matières (dont certaines partagées avec d'autres profs)
-    ens_gcs3 = [
-        Enseignement(matiere_id=matieres[2].id, classe_id=gcs3.id, professor_id=p2.id),  # Dev sécurisé
-        Enseignement(matiere_id=matieres[3].id, classe_id=gcs3.id, professor_id=p1.id),  # Web Pentest (autre prof)
-        Enseignement(matiere_id=matieres[4].id, classe_id=gcs3.id, professor_id=p1.id),  # Forensic
-        Enseignement(matiere_id=matieres[5].id, classe_id=gcs3.id, professor_id=p3.id),  # Cloud
-        Enseignement(matiere_id=matieres[6].id, classe_id=gcs3.id, professor_id=p3.id),  # GRC
-    ]
-    db.session.add_all(ens_gcs2 + ens_gcs3)
-    db.session.flush()
-
-    # ── Emploi du temps GCS2 ─────────────────────────────────────────────────
-    # Lundi=0, Mardi=1, Mercredi=2, Jeudi=3, Vendredi=4
-    schedules_gcs2 = [
-        Schedule(enseignement_id=ens_gcs2[0].id, day_of_week=0, start_time="09:00", end_time="11:00", room="A101"),
-        Schedule(enseignement_id=ens_gcs2[1].id, day_of_week=0, start_time="14:00", end_time="16:00", room="A102"),
-        Schedule(enseignement_id=ens_gcs2[2].id, day_of_week=1, start_time="09:00", end_time="12:00", room="Labo 1"),
-        Schedule(enseignement_id=ens_gcs2[3].id, day_of_week=2, start_time="10:00", end_time="12:00", room="Labo 2"),
-        Schedule(enseignement_id=ens_gcs2[0].id, day_of_week=3, start_time="09:00", end_time="11:00", room="A101"),
-        Schedule(enseignement_id=ens_gcs2[1].id, day_of_week=3, start_time="14:00", end_time="16:00", room="A102"),
-        Schedule(enseignement_id=ens_gcs2[2].id, day_of_week=4, start_time="09:00", end_time="11:00", room="Labo 1"),
-        Schedule(enseignement_id=ens_gcs2[3].id, day_of_week=4, start_time="14:00", end_time="17:00", room="Labo 2"),
-    ]
-    # ── Emploi du temps GCS3 ─────────────────────────────────────────────────
-    schedules_gcs3 = [
-        Schedule(enseignement_id=ens_gcs3[0].id, day_of_week=0, start_time="09:00", end_time="12:00", room="B201"),
-        Schedule(enseignement_id=ens_gcs3[1].id, day_of_week=0, start_time="14:00", end_time="17:00", room="Labo 3"),
-        Schedule(enseignement_id=ens_gcs3[2].id, day_of_week=1, start_time="09:00", end_time="12:00", room="B201"),
-        Schedule(enseignement_id=ens_gcs3[3].id, day_of_week=2, start_time="09:00", end_time="11:00", room="B202"),
-        Schedule(enseignement_id=ens_gcs3[4].id, day_of_week=2, start_time="14:00", end_time="16:00", room="B203"),
-        Schedule(enseignement_id=ens_gcs3[2].id, day_of_week=3, start_time="14:00", end_time="17:00", room="Labo 3"),
-        Schedule(enseignement_id=ens_gcs3[3].id, day_of_week=4, start_time="09:00", end_time="11:00", room="B202"),
-        Schedule(enseignement_id=ens_gcs3[4].id, day_of_week=4, start_time="14:00", end_time="16:00", room="B203"),
-    ]
-    db.session.add_all(schedules_gcs2 + schedules_gcs3)
-
-    # ── Notes GCS2 ───────────────────────────────────────────────────────────
-    from datetime import datetime
-    grades_gcs2 = [
-        # alice (0)
-        (0, 0, 15.5), (0, 1, 12.0), (0, 2, 17.0), (0, 3, None),
-        # bob (1)
-        (1, 0,  9.5), (1, 1, 14.0), (1, 2, None),  (1, 3, 11.0),
-        # claire (2)
-        (2, 0, 18.0), (2, 1, None),  (2, 2, 16.5), (2, 3, 13.0),
-        # david (3)
-        (3, 0, None),  (3, 1, 10.5), (3, 2, 12.0), (3, 3,  8.0),
-        # emma (4)
-        (4, 0, 14.0), (4, 1, 16.0), (4, 2, 13.5), (4, 3, 15.0),
-        # felix (5)
-        (5, 0, 11.0), (5, 1,  7.5), (5, 2, None),  (5, 3, 10.0),
-    ]
-    for si, ei, gval in grades_gcs2:
-        g = Grade(
-            student_id=gcs2_profiles[si].id,
-            enseignement_id=ens_gcs2[ei].id,
-            grade=gval,
-            graded_by=prof1.id if ei < 2 else prof2.id,
-            graded_at=datetime.utcnow() if gval is not None else None,
-        )
-        db.session.add(g)
-
-    # ── Notes GCS3 ───────────────────────────────────────────────────────────
-    grades_gcs3 = [
-        # julie (0)
-        (0, 0, 16.0), (0, 1, 14.5), (0, 2, 17.5), (0, 3, 15.0), (0, 4, 13.0),
-        # kevin (1)
-        (1, 0, 12.0), (1, 1, None),  (1, 2, 11.0), (1, 3, 14.0), (1, 4, 10.5),
-        # lea (2)
-        (2, 0, 19.0), (2, 1, 18.0), (2, 2, 16.0), (2, 3, None),  (2, 4, 17.5),
-        # maxime (3)
-        (3, 0, None),  (3, 1, 13.0), (3, 2, 10.0), (3, 3, 11.5), (3, 4, None),
-        # nina (4)
-        (4, 0, 15.5), (4, 1, 12.0), (4, 2, None),  (4, 3, 16.5), (4, 4, 14.0),
-    ]
-    for si, ei, gval in grades_gcs3:
-        prof_id = ens_gcs3[ei].professor_id
-        g = Grade(
-            student_id=gcs3_profiles[si].id,
-            enseignement_id=ens_gcs3[ei].id,
-            grade=gval,
-            graded_by=prof_id,
-            graded_at=datetime.utcnow() if gval is not None else None,
-        )
-        db.session.add(g)
-
-    db.session.add(AuditLog(
-        username="system", action="seed_db",
-        resource_type="system", resource_id=None,
-    ))
-    db.session.commit()
-    click.echo("✓ Seed complet : 2 classes, 3 profs, 11 étudiants, 7 matières, emploi du temps.")

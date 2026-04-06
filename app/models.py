@@ -453,6 +453,71 @@ class Schedule(db.Model):
         return f"<Schedule ens={self.enseignement_id} day={self.day_of_week} {self.start_time}-{self.end_time}>"
 
 
+# ─── SECURITY POLICY (singleton) ─────────────────────────────────────────
+
+class SecurityPolicy(db.Model):
+    """Politiques de sécurité configurables par l'admin. Table singleton (1 row)."""
+    __tablename__ = "security_policies"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # WAF
+    waf_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    waf_block_sqli = db.Column(db.Boolean, default=True, nullable=False)
+    waf_block_xss = db.Column(db.Boolean, default=True, nullable=False)
+    waf_block_scanners = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Headers HTTP
+    csp_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    hsts_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    x_frame_deny = db.Column(db.Boolean, default=True, nullable=False)
+    x_content_type_nosniff = db.Column(db.Boolean, default=True, nullable=False)
+    referrer_policy_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    permissions_policy_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Sessions
+    session_lifetime_minutes = db.Column(db.Integer, default=30, nullable=False)
+    session_secure_cookie = db.Column(db.Boolean, default=True, nullable=False)
+    session_httponly = db.Column(db.Boolean, default=True, nullable=False)
+    session_fingerprint_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Authentification
+    max_login_attempts = db.Column(db.Integer, default=5, nullable=False)
+    lockout_duration_minutes = db.Column(db.Integer, default=15, nullable=False)
+    account_lockout_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    totp_2fa_available = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Mots de passe
+    pwd_min_length = db.Column(db.Integer, default=8, nullable=False)
+    pwd_require_upper = db.Column(db.Boolean, default=True, nullable=False)
+    pwd_require_digit = db.Column(db.Boolean, default=True, nullable=False)
+    pwd_require_special = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Rate limiting
+    rate_limiting_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    login_rate_limit = db.Column(db.String(30), default="5 per minute", nullable=False)
+
+    # Audit
+    audit_logging_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
+    updated_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False,
+    )
+
+    @classmethod
+    def get_policy(cls) -> "SecurityPolicy":
+        """Retourne la politique active (crée les défauts si absente)."""
+        policy = cls.query.first()
+        if not policy:
+            policy = cls()
+            db.session.add(policy)
+            db.session.commit()
+        return policy
+
+    def __repr__(self) -> str:
+        return "<SecurityPolicy>"
+
+
 # ─── HELPER ──────────────────────────────────────────────────────────────────
 
 def log_audit(

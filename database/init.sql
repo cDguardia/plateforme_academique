@@ -164,7 +164,41 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   INDEX idx_audit_username  (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ── USER SESSIONS ─────────────────────────────────���──────────
+-- ── SECURITY POLICIES (singleton) ────────────────────────────
+CREATE TABLE IF NOT EXISTS security_policies (
+  id                          INT AUTO_INCREMENT PRIMARY KEY,
+  waf_enabled                 BOOLEAN      NOT NULL DEFAULT TRUE,
+  waf_block_sqli              BOOLEAN      NOT NULL DEFAULT TRUE,
+  waf_block_xss               BOOLEAN      NOT NULL DEFAULT TRUE,
+  waf_block_scanners          BOOLEAN      NOT NULL DEFAULT TRUE,
+  csp_enabled                 BOOLEAN      NOT NULL DEFAULT TRUE,
+  hsts_enabled                BOOLEAN      NOT NULL DEFAULT TRUE,
+  x_frame_deny                BOOLEAN      NOT NULL DEFAULT TRUE,
+  x_content_type_nosniff      BOOLEAN      NOT NULL DEFAULT TRUE,
+  referrer_policy_enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+  permissions_policy_enabled  BOOLEAN      NOT NULL DEFAULT TRUE,
+  session_lifetime_minutes    INT          NOT NULL DEFAULT 30,
+  session_secure_cookie       BOOLEAN      NOT NULL DEFAULT TRUE,
+  session_httponly             BOOLEAN      NOT NULL DEFAULT TRUE,
+  session_fingerprint_enabled BOOLEAN      NOT NULL DEFAULT TRUE,
+  max_login_attempts          INT          NOT NULL DEFAULT 5,
+  lockout_duration_minutes    INT          NOT NULL DEFAULT 15,
+  account_lockout_enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+  totp_2fa_available          BOOLEAN      NOT NULL DEFAULT TRUE,
+  pwd_min_length              INT          NOT NULL DEFAULT 8,
+  pwd_require_upper           BOOLEAN      NOT NULL DEFAULT TRUE,
+  pwd_require_digit           BOOLEAN      NOT NULL DEFAULT TRUE,
+  pwd_require_special         BOOLEAN      NOT NULL DEFAULT TRUE,
+  rate_limiting_enabled       BOOLEAN      NOT NULL DEFAULT TRUE,
+  login_rate_limit            VARCHAR(30)  NOT NULL DEFAULT '5 per minute',
+  audit_logging_enabled       BOOLEAN      NOT NULL DEFAULT TRUE,
+  updated_at                  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Insert default policy (all security options ON)
+INSERT INTO security_policies (id) VALUES (1);
+
+-- ── USER SESSIONS ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_sessions (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   user_id       INT          NOT NULL,

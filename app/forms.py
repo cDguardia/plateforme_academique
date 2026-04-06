@@ -12,15 +12,24 @@ from app.models import User
 # ─── VALIDATION HELPERS ──────────────────────────────────────────────────────
 
 def _validate_password_strength(form, field) -> None:  # noqa: ANN001
+    from app.models import SecurityPolicy
     pwd = field.data or ""
-    if len(pwd) < 8:
-        raise ValidationError("Le mot de passe doit contenir au moins 8 caractères.")
-    if not re.search(r"[A-Z]", pwd):
+    try:
+        policy = SecurityPolicy.get_policy()
+        min_len = policy.pwd_min_length or 8
+        require_upper = policy.pwd_require_upper
+        require_digit = policy.pwd_require_digit
+        require_special = policy.pwd_require_special
+    except Exception:
+        min_len, require_upper, require_digit, require_special = 8, True, True, True
+    if len(pwd) < min_len:
+        raise ValidationError(f"Le mot de passe doit contenir au moins {min_len} caracteres.")
+    if require_upper and not re.search(r"[A-Z]", pwd):
         raise ValidationError("Le mot de passe doit contenir au moins une majuscule.")
-    if not re.search(r"\d", pwd):
+    if require_digit and not re.search(r"\d", pwd):
         raise ValidationError("Le mot de passe doit contenir au moins un chiffre.")
-    if not re.search(r"[^A-Za-z0-9]", pwd):
-        raise ValidationError("Le mot de passe doit contenir au moins un caractère spécial.")
+    if require_special and not re.search(r"[^A-Za-z0-9]", pwd):
+        raise ValidationError("Le mot de passe doit contenir au moins un caractere special.")
 
 
 # ─── AUTH FORMS ──────────────────────────────────────────────────────────────

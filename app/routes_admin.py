@@ -8,7 +8,8 @@ from flask_login import login_required
 from app.extensions import db
 from app.forms import ClasseForm, EnseignementForm, MatiereForm, UserCreateForm, UserEditForm
 from app.models import (
-    AuditLog, Classe, Enseignement, Grade, Matiere, Professor, Student, User, log_audit,
+    AuditLog, Classe, Enseignement, Grade, Matiere, Professor,
+    SecurityPolicy, Student, User, log_audit,
 )
 from app.rbac import admin_required
 
@@ -568,29 +569,72 @@ def statistics():
 @login_required
 @admin_required
 def settings():
-    settings_data = {  # noqa: S105
-        "session_lifetime": 30,
-        "session_secure": False,
-        "session_httponly": True,
-        "min_length": 8,
-        "require_upper": True,
-        "require_digit": True,
-        "require_special": True,
-    }
+    policy = SecurityPolicy.get_policy()
+
     if request.method == "POST":
-        log_audit("settings_update")
-        flash("Paramètres enregistrés.", "success")
+        section = request.form.get("section", "")
+
+        if section == "session":
+            lifetime = request.form.get("session_lifetime_minutes", "30")
+            try:
+                policy.session_lifetime_minutes = max(5, min(1440, int(lifetime)))
+            except ValueError:
+                policy.session_lifetime_minutes = 30
+            policy.session_secure_cookie = "session_secure_cookie" in request.form
+            policy.session_httponly = "session_httponly" in request.form
+            policy.session_fingerprint_enabled = "session_fingerprint_enabled" in request.form
+
+        elif section == "auth":
+            attempts = request.form.get("max_login_attempts", "5")
+            lockout = request.form.get("lockout_duration_minutes", "15")
+            try:
+                policy.max_login_attempts = max(1, min(20, int(attempts)))
+            except ValueError:
+                policy.max_login_attempts = 5
+            try:
+                policy.lockout_duration_minutes = max(1, min(120, int(lockout)))
+            except ValueError:
+                policy.lockout_duration_minutes = 15
+            policy.account_lockout_enabled = "account_lockout_enabled" in request.form
+            policy.totp_2fa_available = "totp_2fa_available" in request.form
+
+        elif section == "password":
+            pwd_len = request.form.get("pwd_min_length", "8")
+            try:
+                policy.pwd_min_length = max(6, min(128, int(pwd_len)))
+            except ValueError:
+                policy.pwd_min_length = 8
+            policy.pwd_require_upper = "pwd_require_upper" in request.form
+            policy.pwd_require_digit = "pwd_require_digit" in request.form
+            policy.pwd_require_special = "pwd_require_special" in request.form
+
+        elif section == "rate_limiting":
+            policy.rate_limiting_enabled = "rate_limiting_enabled" in request.form
+            rate = request.form.get("login_rate_limit", "5 per minute").strip()
+            if rate:
+                policy.login_rate_limit = rate[:30]
+
+        elif section == "audit":
+            policy.audit_logging_enabled = "audit_logging_enabled" in request.form
+
+        from datetime import timezone as tz
+        policy.updated_at = datetime.now(tz.utc)
+        db.session.commit()
+        log_audit("security_policy_update", resource_type="security_policy")
+        flash("Politique de securite mise a jour.", "success")
         return redirect(url_for("admin.settings"))
 
-    from flask import current_app
     import sys
     import platform
+    from flask import current_app
     system_info = {
         "Python": sys.version.split()[0],
-        "Platform": platform.system(),
+        "Plateforme": platform.system(),
         "Flask ENV": current_app.config.get("ENV", "development"),
         "Debug": str(current_app.debug),
         "CSRF": str(current_app.config.get("WTF_CSRF_ENABLED", True)),
-        "Session lifetime": f"{current_app.config.get('PERMANENT_SESSION_LIFETIME')}",
+        "Session lifetime": f"{policy.session_lifetime_minutes} min",
     }
-    return render_template("admin/settings.html", settings=settings_data, system_info=system_info)
+    return render_template(
+        "admin/settings.html", policy=policy, system_info=system_info,
+    )
