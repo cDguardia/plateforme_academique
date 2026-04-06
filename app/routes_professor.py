@@ -103,7 +103,10 @@ def courses():
     course_list = []
     for e in prof.enseignements.join(Matiere).order_by(Matiere.name).all():
         sc = Grade.query.filter_by(enseignement_id=e.id).count()
-        avg = db.session.query(func.avg(Grade.grade)).filter_by(enseignement_id=e.id).filter(Grade.grade.isnot(None)).scalar()
+        avg = (
+            db.session.query(func.avg(Grade.grade))
+            .filter_by(enseignement_id=e.id).filter(Grade.grade.isnot(None)).scalar()
+        )
         course_list.append({
             "id": e.id, "name": e.name, "code": e.code,
             "class_name": e.class_name, "credits": e.credits,

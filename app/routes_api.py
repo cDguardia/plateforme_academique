@@ -5,7 +5,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, get_jw
 
 from app.extensions import limiter
 from app.models import User
-from app.rbac import admin_required, student_required
+from app.rbac import admin_required
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 

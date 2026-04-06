@@ -22,7 +22,7 @@ def _get_current_user_role() -> str | None:
             if user_id:
                 user = User.query.get(user_id)
                 return user.role if user else None
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     return None

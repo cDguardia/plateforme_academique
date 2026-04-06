@@ -157,7 +157,9 @@ class Classe(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     students = db.relationship("Student", back_populates="classe", lazy="dynamic")
-    enseignements = db.relationship("Enseignement", back_populates="classe", lazy="dynamic", cascade="all, delete-orphan")
+    enseignements = db.relationship(
+        "Enseignement", back_populates="classe", lazy="dynamic", cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Classe {self.name}>"
@@ -223,7 +225,9 @@ class Matiere(db.Model):
     credits = db.Column(db.Integer, default=3, nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    enseignements = db.relationship("Enseignement", back_populates="matiere", lazy="dynamic", cascade="all, delete-orphan")
+    enseignements = db.relationship(
+        "Enseignement", back_populates="matiere", lazy="dynamic", cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Matiere {self.code}>"
@@ -422,7 +426,7 @@ class Attendance(db.Model):
     recorder = db.relationship("User", foreign_keys=[recorded_by])
 
     def __repr__(self) -> str:
-        return f"<Attendance student={self.student_id} ens={self.enseignement_id} date={self.date} status={self.status}>"
+        return f"<Attendance student={self.student_id} ens={self.enseignement_id} date={self.date}>"
 
 
 class Schedule(db.Model):
@@ -446,7 +450,7 @@ class Schedule(db.Model):
         return self.DAY_NAMES[self.day_of_week]
 
     def __repr__(self) -> str:
-        return f"<Schedule enseignement={self.enseignement_id} day={self.day_of_week} {self.start_time}-{self.end_time}>"
+        return f"<Schedule ens={self.enseignement_id} day={self.day_of_week} {self.start_time}-{self.end_time}>"
 
 
 # ─── HELPER ──────────────────────────────────────────────────────────────────

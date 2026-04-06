@@ -338,7 +338,7 @@ def grades_export():
     story.append(Spacer(1, 12))
 
     data = [["Cours", "Code", "Crédits", "Note", "Date"]]
-    for g, ens, mat, _p, _u in rows:
+    for g, _ens, mat, _p, _u in rows:
         grade_val = f"{float(g.grade):.2f}" if g.grade is not None else "En attente"
         date_val = g.graded_at.strftime("%d/%m/%Y") if g.graded_at else "\u2014"
         data.append([mat.name, mat.code, str(mat.credits), grade_val, date_val])
